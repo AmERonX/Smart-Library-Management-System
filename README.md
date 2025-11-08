@@ -43,7 +43,10 @@ pip install -r requirements.txt
 # 2. Create .env file
 copy .env.example .env  # Windows
 cp .env.example .env    # Linux/Mac
-# Edit .env with your database credentials
+# Edit .env with your database credentials and (optionally) AI keys
+# DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/slms
+# GOOGLE_API_KEY=your_google_api_key_here
+# LANGSEARCH_KEY=your_langsearch_key_here
 
 # 3. Initialize database
 psql -U postgres -c "CREATE DATABASE slms;"
@@ -138,6 +141,19 @@ curl -X POST "http://localhost:8000/catalogue/insert/1"
 }
 ```
 
+### **Semantic Search**
+```bash
+curl -X POST "http://localhost:8000/search/semantic" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "clean code software engineering",
+    "mode": "hybrid",
+    "top_k": 5,
+    "normalize": true,
+    "expand": false
+  }'
+```
+
 **📚 For detailed workflow diagrams, see [docs/WORKFLOW.md](docs/WORKFLOW.md)**
 
 ---
@@ -146,7 +162,7 @@ curl -X POST "http://localhost:8000/catalogue/insert/1"
 - Interactive docs: http://localhost:8000/docs
 - Run tests: `pytest tests/ -v`
 
-For detailed API documentation, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md).
+For detailed API documentation, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md). See [CHANGELOG.md](CHANGELOG.md) for recent changes.
 
 
 
@@ -161,11 +177,8 @@ For detailed API documentation, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.m
 | **[verify_setup.py](verify_setup.py)** | Automated setup verification | All users |
 | **[docs/WORKFLOW.md](docs/WORKFLOW.md)** ⭐ | Complete workflow with diagrams | Developers, architects |
 | **[docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md)** ⭐ | Full API reference | Frontend developers |
-| **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** | Quick commands and tips | Daily development |
-| **[docs/INSERTION_SERVICE_README.md](docs/INSERTION_SERVICE_README.md)** | Book insertion service details | Backend developers |
-| **[docs/LIBRARIAN_CONFIRMATION_README.md](docs/LIBRARIAN_CONFIRMATION_README.md)** | Librarian workflow details | Backend developers |
-| **[docs/FRONTEND_INTEGRATION_GUIDE.md](docs/FRONTEND_INTEGRATION_GUIDE.md)** | Frontend integration guide | Frontend developers |
 | **[personal_notes.md](personal_notes.md)** | Development progress tracker | Internal use only |
+| **[CHANGELOG.md](CHANGELOG.md)** | Consolidated log of changes | All |
 
 **⭐ = Start here for new users**
 
@@ -190,7 +203,7 @@ For detailed API documentation, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.m
 ## Project Structure
 
 ```
-SLMS1/
+SLMS_checkpoint2/
 ├── main.py                          # FastAPI application entry point
 ├── config.py                        # Configuration settings
 ├── database.py                      # Database session management
@@ -203,33 +216,43 @@ SLMS1/
 ├── routes/                          # API endpoints
 │   ├── __init__.py
 │   ├── catalogue.py                 # Librarian confirmation workflow
-│   └── insertion.py                 # Book insertion service
+│   ├── insertion.py                 # Book insertion service
+│   ├── search.py                    # Semantic search API
+│   └── books.py                     # Books list & detail
 │
 ├── services/                        # Business logic layer
 │   ├── __init__.py
-│   └── insertion.py                 # Book insertion business logic
+│   ├── insertion.py                 # Book insertion business logic
+│   ├── embeddings.py                # Enhance metadata + store FAISS vectors
+│   ├── vectorizer.py                # Shared embedding entrypoint (EMBED_DIM)
+│   └── ai/
+│       ├── __init__.py
+│       ├── faiss_sync.py            # FAISS index IO with file locks
+│       └── metadata_enhancer.py     # LangSearch + Gemini metadata enrichment
+│
+├── data/
+│   ├── enhanced_books/              # Enhanced JSON artifacts
+│   └── faiss_index/                 # FAISS index files (.index, .lock)
 │
 ├── tests/                           # Test suite
 │   ├── __init__.py
-│   ├── test_catalogue.py            # Metadata extraction tests
-│   ├── test_librarian_confirmation.py  # Librarian workflow tests
-│   ├── test_insertion.py            # Insertion service tests (17 tests)
-│   └── test_complete_workflow.py    # End-to-end workflow tests
+│   ├── test_catalogue.py
+│   ├── test_librarian_confirmation.py
+│   ├── test_insertion.py
+│   ├── test_complete_workflow.py
+│   └── test_ai_pipeline_e2e.py
 │
-├── db/                              # Database files
+├── db/
 │   ├── Schema/
-│   │   └── db_files.sql             # PostgreSQL base schema
+│   │   └── db_files.sql
 │   └── migrations/
 │       ├── 001_add_isbn_fields_and_core_tables.sql
 │       ├── 002_add_isbn_fields_to_pending_catalogue.sql
 │       └── 003_rename_catalogue_audit_book_id_to_pending_id.sql
 │
-└── docs/                            # Documentation
-    ├── API_ENDPOINTS.md             # Complete API reference
-    ├── WORKFLOW.md                  # Detailed workflow diagrams
-    ├── QUICK_REFERENCE.md           # Quick commands and tips
-    ├── INSERTION_SERVICE_README.md  # Insertion service documentation
-    └── LIBRARIAN_CONFIRMATION_README.md  # Librarian workflow docs
+└── docs/
+    ├── API_ENDPOINTS.md
+    └── WORKFLOW.md
 ```
 
 ## License

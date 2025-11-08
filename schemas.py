@@ -4,9 +4,9 @@ Ensures data integrity and provides automatic API documentation.
 """
 
 import re
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict, AliasChoices
 
 
 # ============================================================================
@@ -21,25 +21,22 @@ class CatalogueAddRequest(BaseModel):
     """
     isbn: Optional[str] = Field(
         None,
-        description="ISBN-10 or ISBN-13 (10 or 13 digits)",
-        example="9780132350884"
+        description="ISBN-10 or ISBN-13 (10 or 13 digits)"
     )
     title: str = Field(
         ...,
         min_length=1,
-        description="Book title (required)",
-        example="Clean Code"
+        description="Book title (required)"
     )
     authors: Optional[List[str]] = Field(
         default=None,
-        description="List of author names",
-        example=["Robert C. Martin"]
+        description="List of author names"
     )
     total_copies: int = Field(
         default=1,
-        ge=1,  # greater than or equal to 1 (required minimum number of copies)
+        ge=1,
         description="Number of copies to add (must be >= 1)",
-        example=3
+        validation_alias=AliasChoices("total_copies", "book_copies"),
     )
     
     @field_validator('isbn')
@@ -47,15 +44,14 @@ class CatalogueAddRequest(BaseModel):
     def validate_isbn(cls, v):
         """Validate ISBN format: must be 10 or 13 digits if provided (allows X as ISBN-10 check digit)."""
         if v is not None:
-            # Remove hyphens and spaces for validation
             cleaned = v.replace('-', '').replace(' ', '').upper()
             if not re.match(r'^(\d{9}[\dX]|\d{13})$', cleaned):
                 raise ValueError('ISBN must be exactly 10 or 13 digits (ISBN-10 may end with X)')
             return cleaned
         return v
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "isbn": "9780132350884",
                 "title": "Clean Code: A Handbook of Agile Software Craftsmanship",
@@ -63,6 +59,36 @@ class CatalogueAddRequest(BaseModel):
                 "total_copies": 3
             }
         }
+    )
+
+
+# ============================================================================
+# SEARCH SCHEMAS
+# ============================================================================
+
+class SemanticSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1)
+    mode: Literal["identity", "topical", "hybrid"] = Field("hybrid")
+    top_k: int = Field(10, ge=1, le=50)
+    normalize: bool = Field(True)
+    expand: bool = Field(False)
+
+
+class SemanticSearchHit(BaseModel):
+    book_id: int
+    score: float
+    vector_type: str
+    title: str
+    authors: Optional[List[str]] = None
+    publisher: Optional[str] = None
+    publication_year: Optional[str] = None
+
+
+class SemanticSearchResponse(BaseModel):
+    query_raw: str
+    query_processed: str
+    mode: str
+    results: List[SemanticSearchHit]
 
 
 class ConfirmationRequest(BaseModel):
@@ -75,15 +101,9 @@ class ConfirmationRequest(BaseModel):
         ...,
         description="True to approve, False to reject"
     )
-    edits: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Dictionary of field edits to apply (only if approved=True)",
-        example={"publisher": "MIT Press", "publication_year": "2016"}
-    )
     reason: Optional[str] = Field(
         default=None,
-        description="Reason for approval/rejection (required if rejected)",
-        example="Metadata verified and corrected"
+        description="Reason for approval/rejection (required if rejected)"
     )
     
     @model_validator(mode='after')
@@ -93,17 +113,15 @@ class ConfirmationRequest(BaseModel):
             raise ValueError('Reason is required when rejecting metadata')
         return self
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        extra='ignore',
+        json_schema_extra={
             "example": {
                 "approved": True,
-                "edits": {
-                    "publisher": "Prentice Hall",
-                    "publication_year": "2008"
-                },
                 "reason": "Verified metadata with library records"
             }
         }
+    )
 
 
 # ============================================================================
@@ -127,8 +145,7 @@ class PendingCatalogueResponse(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     
-    class Config:
-        from_attributes = True  # Pydantic v2 (was orm_mode in v1)
+    model_config = ConfigDict(from_attributes=True)  # Pydantic v2
 
 
 class CatalogueAddResponse(BaseModel):
@@ -140,8 +157,8 @@ class CatalogueAddResponse(BaseModel):
     status: str = Field(..., description="Current status")
     metadata_preview: Optional[Dict[str, Any]] = Field(None, description="Preview of extracted metadata")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "message": "Book added to pending catalogue successfully",
                 "pending_id": 1,
@@ -157,6 +174,7 @@ class CatalogueAddResponse(BaseModel):
                 }
             }
         }
+    )
 
 
 class ConfirmationResponse(BaseModel):
@@ -168,8 +186,8 @@ class ConfirmationResponse(BaseModel):
     status: str = Field(..., description="Updated status")
     output_json: Optional[Dict[str, Any]] = Field(None, description="Finalized metadata (if approved)")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "message": "Metadata approved successfully",
                 "pending_id": 1,
@@ -184,6 +202,7 @@ class ConfirmationResponse(BaseModel):
                 }
             }
         }
+    )
 
 
 class AuditLogResponse(BaseModel):
@@ -197,8 +216,7 @@ class AuditLogResponse(BaseModel):
     details: Optional[str] = Field(None, description="Additional details")
     timestamp: datetime = Field(..., description="Action timestamp")
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AuditLogsResponse(BaseModel):
@@ -210,8 +228,8 @@ class AuditLogsResponse(BaseModel):
     total_entries: int = Field(..., description="Total number of audit entries")
     audit_logs: List[AuditLogResponse] = Field(..., description="List of audit log entries")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "message": "Audit logs retrieved successfully",
                 "pending_id": 1,
@@ -228,6 +246,7 @@ class AuditLogsResponse(BaseModel):
                 ]
             }
         }
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -236,12 +255,13 @@ class ErrorResponse(BaseModel):
     """
     detail: str = Field(..., description="Error message")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "detail": "Pending catalogue entry not found"
             }
         }
+    )
 
 
 # ============================================================================
@@ -258,8 +278,8 @@ class InsertionResponse(BaseModel):
     book_id: Optional[int] = Field(None, description="ID of created/updated book")
     status: str = Field(..., description="Status of pending entry after insertion")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "message": "Book inserted successfully",
@@ -281,3 +301,60 @@ class InsertionResponse(BaseModel):
                 }
             ]
         }
+    )
+
+class BookListItem(BaseModel):
+    book_id: int
+    title: str
+    authors: Optional[List[str]] = None
+    publisher: Optional[str] = None
+    publication_year: Optional[str] = None
+    available_copies: int
+    cover_url: Optional[str] = None
+
+
+class BooksListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    items: List[BookListItem]
+
+
+class PublisherRef(BaseModel):
+    publisher_id: int
+    name: str
+
+
+class AuthorRef(BaseModel):
+    author_id: int
+    full_name: str
+
+
+class BookDetailResponse(BaseModel):
+    book_id: int
+    title: str
+    isbn: Optional[str] = None
+    isbn_10: Optional[str] = None
+    isbn_13: Optional[str] = None
+    publication_year: Optional[str] = None
+    edition: Optional[str] = None
+    cover_url: Optional[str] = None
+    total_copies: int
+    available_copies: int
+    publisher: Optional[PublisherRef] = None
+    authors: List[AuthorRef]
+    enhanced_metadata: Optional[Dict[str, Any]] = None
+
+
+class PendingEditRequest(BaseModel):
+    title: Optional[str] = None
+    authors: Optional[List[str]] = None
+    isbn: Optional[str] = None
+    isbn_10: Optional[str] = None
+    isbn_13: Optional[str] = None
+    total_copies: Optional[int] = Field(
+        default=None,
+        ge=1,
+        validation_alias=AliasChoices("total_copies", "book_copies"),
+    )
+    raw_metadata: Optional[Dict[str, Any]] = None

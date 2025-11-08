@@ -10,13 +10,14 @@ Endpoints:
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import get_db
 from schemas import InsertionResponse, ErrorResponse
 from services.insertion import insert_pending_book
+from services.embeddings import enhance_and_store
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -141,6 +142,7 @@ router = APIRouter(
 )
 async def insert_approved_book(
     pending_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
@@ -165,6 +167,12 @@ async def insert_approved_book(
     try:
         # Call core insertion service
         result = insert_pending_book(db, pending_id)
+        # Auto-trigger enhancement only when a brand-new book was inserted
+        if result.get('action') == 'inserted' and result.get('book_id'):
+            book_id = int(result['book_id'])
+            logger.info(f"Scheduling enhancement for book_id={book_id}")
+            # Pass current engine so background task uses the same DB (important in tests)
+            background_tasks.add_task(enhance_and_store, book_id, db.bind)
         
         # Return success response
         return InsertionResponse(

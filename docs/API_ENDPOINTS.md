@@ -176,7 +176,51 @@ curl -X GET "http://localhost:8000/catalogue/pending?skip=0&limit=20"
 
 ---
 
-### **3. Confirm/Reject Book Metadata**
+### **3. Get Single Pending Book**
+
+**Endpoint:** `GET /catalogue/pending/{pending_id}`
+
+**Description:** Fetch a single pending entry by ID.
+
+**Path Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `pending_id` | integer | Yes | ID of pending catalogue entry |
+
+**Success Response (200 OK):** Same shape as items in `GET /catalogue/pending`.
+
+**Error Responses:**
+- `404 Not Found`: Pending entry not found
+
+---
+
+### **4. Edit Pending Book (Pre-Approval)**
+
+**Endpoint:** `PATCH /catalogue/pending/{pending_id}`
+
+**Description:** Save librarian edits before approval. Updates the pending record's `raw_metadata` and mirrors select fields (title, authors, isbn*, total_copies).
+
+**Request Body (examples):**
+```json
+{ "raw_metadata": { "publisher": "Prentice Hall PTR", "edition": "1st" } }
+```
+```json
+{ "book_copies": 2 }
+```
+
+Notes:
+- Accepts either `total_copies` or `book_copies` (alias). Minimum is 1.
+- Allowed when status is `awaiting_confirmation` or `failed`.
+
+**Success Response (200 OK):** Updated pending entry.
+
+**Error Responses:**
+- `400 Bad Request`: Invalid status or `total_copies < 1`
+- `404 Not Found`: Pending entry not found
+
+---
+
+### **5. Confirm/Reject Book Metadata**
 
 **Endpoint:** `POST /catalogue/confirm/{pending_id}`
 
@@ -189,15 +233,7 @@ curl -X GET "http://localhost:8000/catalogue/pending?skip=0&limit=20"
 
 **Request Body (Approve):**
 ```json
-{
-  "approved": true,
-  "edits": {
-    "publisher": "Prentice Hall PTR",
-    "publication_year": "2008",
-    "edition": "1st Edition"
-  },
-  "reason": "Verified metadata with library records"
-}
+{ "approved": true, "reason": "Verified metadata with library records" }
 ```
 
 **Request Body (Reject):**
@@ -212,10 +248,11 @@ curl -X GET "http://localhost:8000/catalogue/pending?skip=0&limit=20"
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `approved` | boolean | Yes | True to approve, false to reject |
-| `edits` | object | No | Dictionary of field corrections (only if approved) |
 | `reason` | string | No* | Reason for approval/rejection |
 
-*Required if `approved=false`
+*Required if `approved=false`.
+
+Edits are no longer accepted at confirmation time. Use `PATCH /catalogue/pending/{id}` to make changes before confirming.
 
 **Success Response - Approved (200 OK):**
 ```json
@@ -231,9 +268,9 @@ curl -X GET "http://localhost:8000/catalogue/pending?skip=0&limit=20"
     "authors": ["Robert C. Martin"],
     "publisher": "Prentice Hall PTR",
     "publication_year": "2008",
-    "edition": "1st Edition",
+    "edition": "1st",
     "total_copies": 3,
-    "source": "librarian_confirmed"
+    "source": "librarian_confirmation"
   }
 }
 ```
@@ -280,7 +317,7 @@ curl -X POST "http://localhost:8000/catalogue/confirm/123" \
 
 ## 📦 **Book Insertion**
 
-### **4. Insert Approved Book into Catalogue**
+### **6. Insert Approved Book into Catalogue**
 
 **Endpoint:** `POST /catalogue/insert/{pending_id}`
 
@@ -343,6 +380,72 @@ curl -X POST "http://localhost:8000/catalogue/insert/123"
 7. Logs complete audit trail
 
 **Idempotency:** Safe to call multiple times - returns success if already completed.
+
+---
+
+## 📚 **Books Catalogue**
+
+### **7. List Books**
+
+**Endpoint:** `GET /books`
+
+**Query Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `page` | integer | No | 1 | Page number |
+| `page_size` | integer | No | 20 | Items per page (max 100) |
+| `q` | string | No | — | Title substring (case-insensitive) |
+| `author` | string | No | — | Author substring (case-insensitive) |
+| `publisher` | string | No | — | Publisher substring (case-insensitive) |
+| `year` | string | No | — | Exact publication year |
+| `year_from` | string | No | — | Start year (inclusive) |
+| `year_to` | string | No | — | End year (inclusive) |
+| `sort` | string | No | created_desc | One of: created_desc, title_asc, year_asc, year_desc |
+
+**Success Response (200 OK):**
+```json
+{
+  "total": 1,
+  "page": 1,
+  "page_size": 20,
+  "items": [
+    {
+      "book_id": 456,
+      "title": "Clean Code",
+      "authors": ["Robert C. Martin"],
+      "publisher": "Prentice Hall",
+      "publication_year": "2008",
+      "available_copies": 5,
+      "cover_url": "https://..."
+    }
+  ]
+}
+```
+
+---
+
+### **8. Get Book Detail**
+
+**Endpoint:** `GET /books/{book_id}`
+
+**Success Response (200 OK):**
+```json
+{
+  "book_id": 456,
+  "title": "Clean Code",
+  "isbn": null,
+  "isbn_10": "0132350882",
+  "isbn_13": "9780132350884",
+  "publication_year": "2008",
+  "edition": null,
+  "cover_url": "https://...",
+  "total_copies": 5,
+  "available_copies": 5,
+  "publisher": { "publisher_id": 7, "name": "Prentice Hall" },
+  "authors": [{ "author_id": 3, "full_name": "Robert C. Martin" }],
+  "enhanced_metadata": { }
+}
+```
 
 ---
 
@@ -560,9 +663,153 @@ All error responses follow this format:
 | `/health` | GET | Health check | No |
 | `/catalogue/add` | POST | Add book with metadata | No |
 | `/catalogue/pending` | GET | List pending books | No |
-| `/catalogue/confirm/{id}` | POST | Approve/reject metadata | No |
+| `/catalogue/pending/{id}` | GET | Get single pending entry | No |
+| `/catalogue/pending/{id}` | PATCH | Save edits before approval | No |
+| `/catalogue/confirm/{id}` | POST | Approve/reject metadata (finalize from saved edits) | No |
 | `/catalogue/insert/{id}` | POST | Insert into catalogue | No |
 | `/catalogue/audit/{id}` | GET | Get audit logs | No |
+| `/books` | GET | List books with filters | No |
+| `/books/{book_id}` | GET | Book detail | No |
+
+---
+
+## 🧭 User-Facing Endpoints (Student)
+
+This section documents endpoints used by students/end-users to search, borrow, reserve, return, and view account data. Items marked as Planned indicate endpoints inferred from the database schema that are not yet implemented in the codebase.
+
+### 🔍 9. Semantic Search (Existing)
+
+- Endpoint: `POST /search/semantic`
+- Description: Vector-based semantic search over the catalogue with optional normalization and query expansion.
+- Request Body example:
+  ```json
+  {
+    "query": "machine learning for beginners",
+    "normalize": true,
+    "expand": false,
+    "mode": "best_of", 
+    "top_k": 10
+  }
+  ```
+- Success Response (200 OK):
+  ```json
+  {
+    "query_raw": "machine learning for beginners",
+    "query_processed": "machine learning for beginners",
+    "mode": "best_of",
+    "results": [
+      { "book_id": 123, "title": "...", "authors": ["..."], "publisher": "...", "publication_year": "2021", "score": 0.87, "vector_type": "topical" }
+    ]
+  }
+  ```
+
+### 🔎 10. Classic Search (Planned)
+
+- Endpoint: `POST /books/search`
+- Description: Keyword/fielded search (title, author, publisher, years) with pagination and sort; complements semantic search.
+- Request Body example:
+  ```json
+  {
+    "q": "data structures",
+    "author": "Cormen",
+    "publisher": "MIT",
+    "year": null,
+    "year_from": "2000",
+    "year_to": "2025",
+    "page": 1,
+    "page_size": 20,
+    "sort": "created_desc"
+  }
+  ```
+- Response: Same shape as `GET /books` list.
+
+### 📚 11. Catalogue Helpers (Planned)
+
+- `GET /books/{book_id}/availability`
+  - Description: Returns `available_copies` and derived `status` for a book.
+  - Response example:
+    ```json
+    { "book_id": 456, "available_copies": 2, "status": "available" }
+    ```
+- `GET /books/{book_id}/metadata`
+  - Description: Returns extended metadata from `book_metadata` (description, toc, keywords).
+  - Response example:
+    ```json
+    { "book_id": 456, "description": "...", "toc": "...", "keywords": ["...", "..."] }
+    ```
+- `GET /categories`
+  - Description: List categories for browsing and filtering.
+- `GET /authors`
+  - Description: List authors (with optional filtering and pagination).
+
+### 📖 12. Borrowing (Planned)
+
+- `POST /borrows`
+  - Description: Borrow a book. Uses concurrency-safe stored function `borrow_book(user_id, book_id, due_date)`; if no copies, auto-creates a reservation.
+  - Request body:
+    ```json
+    { "book_id": 456, "due_date": "2025-11-30T23:59:59Z" }
+    ```
+  - Response examples:
+    ```json
+    { "success": true, "borrow_id": 789, "reserved": false }
+    ```
+    ```json
+    { "success": false, "reserved": true }
+    ```
+- `GET /borrows/active`
+  - Description: List current borrows for the authenticated user (`return_date IS NULL`).
+- `GET /borrows/history`
+  - Description: Full borrowing history for the user.
+- `POST /borrows/{borrow_id}/renew`
+  - Description: Extend due date if eligible (policy-controlled).
+  - Request body:
+    ```json
+    { "new_due_date": "2025-12-15T23:59:59Z" }
+    ```
+
+### 🔄 13. Returns (Planned)
+
+- `POST /borrows/{borrow_id}/return`
+  - Description: Return a borrowed book; sets `return_date=NOW()` and increments `books.available_copies`. May create a fine via trigger if overdue.
+  - Response example:
+    ```json
+    { "success": true, "fine_created": false }
+    ```
+
+### 📌 14. Reservations (Planned)
+
+- `POST /reservations`
+  - Description: Create reservation for a book when unavailable. Enforced uniqueness per user/book by partial unique index.
+  - Request body:
+    ```json
+    { "book_id": 456 }
+    ```
+- `GET /reservations/active`
+  - Description: List active reservations for the user.
+- `DELETE /reservations/{reservation_id}`
+  - Description: Cancel reservation (sets status to `cancelled`).
+- `POST /reservations/{reservation_id}/fulfill`
+  - Description: Mark as fulfilled when copy becomes available (typically coordinated with a borrow operation).
+
+### 💳 15. Fines (Planned)
+
+- `GET /fines`
+  - Description: List fines for the user with status and amounts.
+- `POST /fines/{fine_id}/pay`
+  - Description: Mark fine as paid; sets `status='paid'` and `paid_date=NOW()`.
+
+### 👤 16. User Account (Planned)
+
+- `GET /me`
+  - Description: Basic profile for the authenticated user.
+- `GET /me/summary`
+  - Description: Dashboard: counts of active borrows, active reservations, pending fines.
+
+Notes:
+- Planned endpoints are derived from tables: `borrow_records`, `reservations`, `fines`, `book_metadata`, `categories`, and `authors` in the schema (lms_core).
+- Book status consistency is handled by DB triggers; APIs should update `available_copies` and let triggers manage `books.status`.
+- Reservation uniqueness: conflicts should return `409 Conflict` using the partial unique index on `(user_id, book_id)` where `status='active'`.
 
 ---
 
@@ -587,22 +834,23 @@ echo "Created pending entry: $PENDING_ID"
 # Step 2: Get pending books (librarian view)
 curl -X GET "http://localhost:8000/catalogue/pending"
 
-# Step 3: Approve metadata
-curl -X POST "http://localhost:8000/catalogue/confirm/$PENDING_ID" \
+# Step 3: Save librarian edits before approval (optional)
+curl -X PATCH "http://localhost:8000/catalogue/pending/$PENDING_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "approved": true,
-    "edits": {
-      "publisher": "Prentice Hall",
-      "publication_year": "2008"
-    },
-    "reason": "Verified"
+    "raw_metadata": { "publisher": "Prentice Hall", "publication_year": "2008" },
+    "book_copies": 2
   }'
 
-# Step 4: Insert into catalogue
+# Step 4: Approve metadata (finalize from saved metadata)
+curl -X POST "http://localhost:8000/catalogue/confirm/$PENDING_ID" \
+  -H "Content-Type: application/json" \
+  -d '{ "approved": true, "reason": "Verified" }'
+
+# Step 5: Insert into catalogue
 curl -X POST "http://localhost:8000/catalogue/insert/$PENDING_ID"
 
-# Step 5: View audit trail
+# Step 6: View audit trail
 curl -X GET "http://localhost:8000/catalogue/audit/$PENDING_ID"
 ```
 
@@ -657,6 +905,17 @@ ENABLE_OPENLIBRARY=true
 ENABLE_GOOGLEBOOKS=true
 ```
 
+## 🧩 **Frontend Integration Overview**
+
+For browser-based UIs:
+
+- Enable CORS in `main.py` (FastAPI `CORSMiddleware`).
+- Paginate large lists (e.g., pending catalogue) to avoid heavy payloads.
+- Standardize error responses (`schemas.ErrorResponse`).
+- Consider auth (API key or JWT) before production.
+
+Client generation: use `openapi.json` with openapi-typescript-codegen to create a typed client.
+
 ### **API Rate Limits**
 
 **External APIs:**
@@ -672,9 +931,7 @@ ENABLE_GOOGLEBOOKS=true
 ## 📚 **Additional Resources**
 
 - **Workflow Documentation**: [WORKFLOW.md](WORKFLOW.md)
-- **Insertion Service**: [INSERTION_SERVICE_README.md](INSERTION_SERVICE_README.md)
-- **Librarian Confirmation**: [LIBRARIAN_CONFIRMATION_README.md](LIBRARIAN_CONFIRMATION_README.md)
-- **Testing Guide**: [TESTING_GUIDE.md](TESTING_GUIDE.md)
+- **Setup Guide**: [../SETUP_GUIDE.md](../SETUP_GUIDE.md)
 
 ---
 

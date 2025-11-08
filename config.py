@@ -5,6 +5,10 @@ Centralized configuration for easy customization and environment-specific settin
 
 import os
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables early
+load_dotenv()
 
 # ============================================================================
 # API CONFIGURATION
@@ -84,6 +88,32 @@ ENABLE_GOOGLEBOOKS = os.getenv("ENABLE_GOOGLEBOOKS", "True").lower() == "true"
 ENABLE_API_LOGGING = os.getenv("ENABLE_API_LOGGING", "True").lower() == "true"
 
 # ============================================================================
+# AI ENHANCEMENT CONFIGURATION
+# ============================================================================
+
+# Feature flag to enable AI enhancement pipeline
+ENABLE_AI_ENHANCEMENT = os.getenv("ENABLE_AI_ENHANCEMENT", "True").lower() == "true"
+
+# Keys for Gemini and LangSearch
+GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY", None)
+LANGSEARCH_KEY: Optional[str] = os.getenv("LANGSEARCH_KEY", None)
+
+# File system paths for artifacts
+ENHANCED_BOOKS_DIR = os.getenv("ENHANCED_BOOKS_DIR", os.path.join("data", "enhanced_books"))
+FAISS_INDEX_DIR = os.getenv("FAISS_INDEX_DIR", os.path.join("data", "faiss_index"))
+FAISS_INDEX_PATH = os.path.join(FAISS_INDEX_DIR, "library_index.faiss")
+FAISS_ID_MAP_PATH = os.path.join(FAISS_INDEX_DIR, "id_map.json")
+
+# Dual FAISS indexes and lock files (new)
+FAISS_IDENTITY_INDEX_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_identity.index")
+FAISS_TOPICAL_INDEX_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_topical.index")
+FAISS_IDENTITY_LOCK_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_identity.lock")
+FAISS_TOPICAL_LOCK_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_topical.lock")
+
+# Strict validation toggle (fail startup if AI keys missing)
+STRICT_AI_VALIDATION = os.getenv("STRICT_AI_VALIDATION", "False").lower() == "true"
+
+# ============================================================================
 # FUTURE CONFIGURATION (Step 2+)
 # ============================================================================
 
@@ -142,6 +172,15 @@ def get_config_summary() -> dict:
         "logging": {
             "level": LOG_LEVEL,
             "api_logging": ENABLE_API_LOGGING
+        },
+        "ai_enhancement": {
+            "enabled": ENABLE_AI_ENHANCEMENT,
+            "google_api_key_configured": bool(GOOGLE_API_KEY),
+            "langsearch_key_configured": bool(LANGSEARCH_KEY),
+            "paths": {
+                "enhanced_books_dir": ENHANCED_BOOKS_DIR,
+                "faiss_index_dir": FAISS_INDEX_DIR
+            }
         }
     }
 
@@ -163,6 +202,13 @@ def validate_config():
     if MAX_RETRIES < 0:
         errors.append("MAX_RETRIES cannot be negative")
     
+    # AI enhancement validation (soft by default)
+    if ENABLE_AI_ENHANCEMENT and STRICT_AI_VALIDATION:
+        if not GOOGLE_API_KEY:
+            errors.append("GOOGLE_API_KEY is required when ENABLE_AI_ENHANCEMENT and STRICT_AI_VALIDATION are true")
+        if not LANGSEARCH_KEY:
+            errors.append("LANGSEARCH_KEY is required when ENABLE_AI_ENHANCEMENT and STRICT_AI_VALIDATION are true")
+
     if errors:
         raise ValueError(f"Configuration errors: {', '.join(errors)}")
 

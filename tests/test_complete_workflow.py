@@ -158,12 +158,22 @@ def test_confirm_book(pending_id: int):
     """Test Step 3: Confirm/approve book metadata."""
     print_step(3, "Confirm Book Metadata (Librarian Action)")
     
-    confirmation_data = {
-        "approved": True,
-        "edits": {
+    # Apply desired changes via PATCH before confirm
+    patch_body = {
+        "raw_metadata": {
             "publisher": "Prentice Hall",
             "publication_year": "2008"
-        },
+        }
+    }
+    patch_resp = requests.patch(
+        f"{BASE_URL}/catalogue/pending/{pending_id}",
+        json=patch_body,
+        timeout=5
+    )
+    assert patch_resp.status_code == 200, f"Failed to patch pending: {patch_resp.status_code}"
+
+    confirmation_data = {
+        "approved": True,
         "reason": "Verified and corrected metadata"
     }
     

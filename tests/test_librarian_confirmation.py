@@ -218,13 +218,19 @@ def test_confirm_approved_updates_status():
     db.commit()
     db.close()
     
-    # Act - Approve with edits
-    confirmation_data = {
-        "approved": True,
-        "edits": {
+    # Apply librarian edits via PATCH before confirming
+    patch_body = {
+        "raw_metadata": {
             "publisher": "Prentice Hall PTR",
             "edition": "1st"
-        },
+        }
+    }
+    patch_resp = client.patch(f"/catalogue/pending/{pending_id}", json=patch_body)
+    assert patch_resp.status_code == 200
+
+    # Act - Approve (finalize from saved metadata)
+    confirmation_data = {
+        "approved": True,
         "reason": "Metadata verified"
     }
     response = client.post(f"/catalogue/confirm/{pending_id}", json=confirmation_data)

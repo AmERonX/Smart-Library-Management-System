@@ -3,8 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyo
+
 .Python
 build/
+dist/
 develop-eggs/
 dist/
 downloads/
@@ -38,6 +41,9 @@ ENV/
 .coverage
 htmlcov/
 .tox/
+.nox/
+.coverage.*
+coverage.xml
 
 # Logs
 *.log
@@ -45,10 +51,34 @@ htmlcov/
 # Environment variables
 .env
 .env.local
+.env.*
+!.env.example
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # FastAPI
 .mypy_cache/
+
+# Data artifacts (FAISS and enhanced JSON)
+data/enhanced_books/
+data/enhanced_books/*.json
+data/faiss_index/*.index
+data/faiss_index/*.faiss
+data/faiss_index/*.lock
+data/faiss_index/*.tmp
+data/faiss_index/id_map.json
+
+# Uploads (if used later)
+uploads/
+uploads/**
+
+# Local DBs
+*.db
+*.sqlite
+*.sqlite3
+
+# Notebooks
+.ipynb_checkpoints/

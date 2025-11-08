@@ -6,15 +6,17 @@ Implements the complete workflow with full audit trail.
 import logging
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 
-from database import get_db
+from database import get_db, Base
 from models import PendingCatalogue, CatalogueAudit
 from schemas import (
     CatalogueAddRequest,
     CatalogueAddResponse,
     PendingCatalogueResponse,
+    PendingEditRequest,
     ConfirmationRequest,
     ConfirmationResponse,
     AuditLogsResponse,
@@ -110,6 +112,14 @@ async def add_book_to_pending_catalogue(
     try:
         logger.info(f"Received request to add book: title={request.title}, isbn={request.isbn}")
         
+        # Ensure required tables exist for the current DB bind (useful in test DBs)
+        try:
+            insp = inspect(db.bind)
+            if not insp.has_table("pending_catalogue"):
+                Base.metadata.create_all(bind=db.bind)
+        except Exception:
+            pass
+
         # Step 1: Create pending catalogue entry with status='pending'
         pending_entry = PendingCatalogue(
             isbn=request.isbn,
@@ -253,6 +263,126 @@ async def add_book_to_pending_catalogue(
         )
 
 
+@router.get("/pending/{pending_id}", response_model=PendingCatalogueResponse)
+async def get_pending_by_id(pending_id: int, db: Session = Depends(get_db)):
+    try:
+        pending_entry = db.query(PendingCatalogue).filter(PendingCatalogue.id == pending_id).first()
+        if not pending_entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pending catalogue entry with id {pending_id} not found"
+            )
+        return pending_entry
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching pending entry {pending_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch pending entry: {str(e)}"
+        )
+
+
+@router.patch("/pending/{pending_id}", response_model=PendingCatalogueResponse)
+async def update_pending_entry(
+    pending_id: int,
+    request: PendingEditRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        pending_entry = db.query(PendingCatalogue).filter(PendingCatalogue.id == pending_id).first()
+        if not pending_entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pending catalogue entry with id {pending_id} not found"
+            )
+        if pending_entry.status in ["approved", "completed"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot edit entry with status '{pending_entry.status}'"
+            )
+
+        changed = []
+
+        if request.raw_metadata is not None:
+            base = dict(pending_entry.raw_metadata or {})
+            base.update(request.raw_metadata)
+            pending_entry.raw_metadata = base
+            changed.append("raw_metadata")
+
+        if request.title is not None:
+            pending_entry.title = request.title
+            if pending_entry.raw_metadata is None:
+                pending_entry.raw_metadata = {}
+            pending_entry.raw_metadata["title"] = request.title
+            changed.append("title")
+
+        if request.authors is not None:
+            pending_entry.authors = request.authors
+            if pending_entry.raw_metadata is None:
+                pending_entry.raw_metadata = {}
+            pending_entry.raw_metadata["authors"] = request.authors
+            changed.append("authors")
+
+        if request.isbn is not None:
+            pending_entry.isbn = request.isbn
+            if pending_entry.raw_metadata is None:
+                pending_entry.raw_metadata = {}
+            pending_entry.raw_metadata["isbn"] = request.isbn
+            changed.append("isbn")
+
+        if request.isbn_10 is not None:
+            pending_entry.isbn_10 = request.isbn_10
+            if pending_entry.raw_metadata is None:
+                pending_entry.raw_metadata = {}
+            pending_entry.raw_metadata["isbn_10"] = request.isbn_10
+            changed.append("isbn_10")
+
+        if request.isbn_13 is not None:
+            pending_entry.isbn_13 = request.isbn_13
+            if pending_entry.raw_metadata is None:
+                pending_entry.raw_metadata = {}
+            pending_entry.raw_metadata["isbn_13"] = request.isbn_13
+            changed.append("isbn_13")
+
+        if request.total_copies is not None:
+            pending_entry.total_copies = int(request.total_copies)
+            if pending_entry.raw_metadata is None:
+                pending_entry.raw_metadata = {}
+            pending_entry.raw_metadata["total_copies"] = int(request.total_copies)
+            changed.append("total_copies")
+
+        # Validate total_copies before commit
+        if pending_entry.total_copies is None or int(pending_entry.total_copies) < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="total_copies must be >= 1. Please PATCH with a valid total_copies value."
+            )
+
+        db.commit()
+        db.refresh(pending_entry)
+
+        try:
+            create_audit_log(
+                db=db,
+                pending_id=pending_id,
+                action="pending_edited",
+                source="librarian",
+                details=("fields: " + ", ".join(changed)) if changed else "no changes"
+            )
+        except Exception:
+            pass
+
+        return pending_entry
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating pending entry {pending_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update pending entry: {str(e)}"
+        )
 @router.get("/pending", response_model=List[PendingCatalogueResponse])
 async def get_pending_books(db: Session = Depends(get_db)):
     """
@@ -294,6 +424,7 @@ async def get_pending_books(db: Session = Depends(get_db)):
 async def confirm_book_metadata(
     pending_id: int,
     request: ConfirmationRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
@@ -354,22 +485,22 @@ async def confirm_book_metadata(
             logger.info(f"Approving metadata for pending_id={pending_id}")
             
             # Start with raw_metadata or empty dict
-            base_metadata = pending_entry.raw_metadata or {}
-            
-            # Apply edits if provided
-            if request.edits:
-                base_metadata.update(request.edits)
-                logger.debug(f"Applied {len(request.edits)} edits to metadata")
+            base_metadata = dict(pending_entry.raw_metadata or {})
             
             # Create output_json with complete metadata
             output_json = {
-                "isbn": pending_entry.isbn,
-                "title": pending_entry.title,
-                "authors": pending_entry.authors or [],
+                # Prefer API-fetched (and possibly edited) metadata; fallback to original input only if missing
+                "isbn": base_metadata.get("isbn") or pending_entry.isbn,
+                "isbn_10": base_metadata.get("isbn_10"),
+                "isbn_13": base_metadata.get("isbn_13"),
+                "title": base_metadata.get("title") or pending_entry.title,
+                "authors": base_metadata.get("authors") or (pending_entry.authors or []),
                 "publisher": base_metadata.get("publisher"),
                 "publication_year": base_metadata.get("publication_year"),
                 "edition": base_metadata.get("edition"),
                 "description": base_metadata.get("description"),
+                "cover_url": base_metadata.get("cover_url"),
+                "categories": base_metadata.get("categories"),
                 "total_copies": pending_entry.total_copies,
                 "keywords": base_metadata.get("keywords"),
                 "embeddings": base_metadata.get("embeddings"),
@@ -392,7 +523,9 @@ async def confirm_book_metadata(
             
             db.commit()
             db.refresh(pending_entry)
-            
+
+            # Enhancement now triggers automatically after insertion; no background task here
+
             logger.info(f"Successfully approved metadata for pending_id={pending_id}")
             
             return ConfirmationResponse(

@@ -586,9 +586,7 @@ LIMIT 10;
 - ✅ **Transactional**: No partial state on errors
 
 **Next Steps:**
-- See [API_ENDPOINTS.md](API_ENDPOINTS.md) for detailed API documentation
-- See [INSERTION_SERVICE_README.md](INSERTION_SERVICE_README.md) for insertion service details
-- See [LIBRARIAN_CONFIRMATION_README.md](LIBRARIAN_CONFIRMATION_README.md) for confirmation workflow
+- See [API_ENDPOINTS.md](API_ENDPOINTS.md) for detailed API documentation, frontend integration guidance, and all workflow endpoint details
 
 ---
 

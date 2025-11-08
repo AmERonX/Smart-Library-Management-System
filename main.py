@@ -8,6 +8,7 @@ import logging
 import re
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field, field_validator, model_validator
 import requests
 from requests.exceptions import RequestException, Timeout
@@ -28,6 +29,8 @@ from config import (
 # Import database and routes for librarian confirmation feature
 from database import init_db
 from routes import catalogue, insertion
+from routes import search
+from routes import books
 
 # Configure logging
 logging.basicConfig(
@@ -36,17 +39,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Smart Library Management System (SLMS)",
-    description="Book metadata fetching service with librarian confirmation workflow",
-    version="2.0.0"
-)
-
-# Initialize database tables on startup
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database tables on application startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """App lifespan: initialize DB tables on startup."""
     logger.info("Initializing database tables...")
     try:
         init_db()
@@ -54,10 +49,21 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
         # Don't fail startup - allow app to run even if DB is not available
+    yield
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Smart Library Management System (SLMS)",
+    description="Book metadata fetching service with librarian confirmation workflow",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 # Include routers
 app.include_router(catalogue.router)
 app.include_router(insertion.router)  # Phase-1: Book Insertion Service
+app.include_router(search.router)  # Semantic Search
+app.include_router(books.router)  # Books list & detail
 
 
 # ============================================================================

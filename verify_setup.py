@@ -44,6 +44,164 @@ def check_python_version():
     return is_valid
 
 
+def check_ai_keys():
+    """Check AI-related environment keys (optional)."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        google_key = os.getenv('GOOGLE_API_KEY')
+        ls_key = os.getenv('LANGSEARCH_KEY')
+        configured = bool(google_key) and bool(ls_key)
+        if configured:
+            print_check("AI Keys", True, "GOOGLE_API_KEY and LANGSEARCH_KEY configured")
+        else:
+            # Optional but recommended for AI pipeline and semantic search
+            missing = []
+            if not google_key:
+                missing.append('GOOGLE_API_KEY')
+            if not ls_key:
+                missing.append('LANGSEARCH_KEY')
+            print_check("AI Keys", False, f"Optional: missing {', '.join(missing)}")
+        return True
+    except Exception as e:
+        print_check("AI Keys", False, f"Error: {str(e)}")
+        return False
+
+
+def check_env_values():
+    """Validate critical env values (formats and sanity)."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        db_url = os.getenv('DATABASE_URL', '')
+        host = os.getenv('HOST', '0.0.0.0')
+        port = os.getenv('PORT', '8000')
+        ok = True
+        if not db_url.startswith('postgresql://'):
+            ok = False
+            print_check("DATABASE_URL format", False, "Expected to start with postgresql://")
+        else:
+            print_check("DATABASE_URL format", True, "postgresql://…")
+        try:
+            p = int(port)
+            print_check("Server PORT", 0 < p < 65536, str(p))
+            ok = ok and (0 < p < 65536)
+        except Exception:
+            ok = False
+            print_check("Server PORT", False, f"Invalid integer: {port}")
+        # Optional flags sanity (do not fail build)
+        for flag in ["ENABLE_OPENLIBRARY", "ENABLE_GOOGLEBOOKS", "ENABLE_AI_ENHANCEMENT"]:
+            val = os.getenv(flag, '').lower()
+            if val in ('true', 'false', ''):
+                print_check(flag, True, val or "(unset)")
+            else:
+                print_check(flag, False, f"Expected true/false, got '{val}'")
+        return ok
+    except Exception as e:
+        print_check("Env values", False, f"Error: {e}")
+        return False
+
+
+def check_faiss_indexes_readable():
+    """If FAISS indexes exist, ensure they are readable by faiss."""
+    try:
+        from dotenv import load_dotenv
+        import faiss  # type: ignore
+        load_dotenv()
+        idx_dir = os.getenv('FAISS_INDEX_DIR', 'data/faiss_index')
+        identity = Path(idx_dir) / 'faiss_identity.index'
+        topical = Path(idx_dir) / 'faiss_topical.index'
+        ok = True
+        for name, path in [("FAISS identity", identity), ("FAISS topical", topical)]:
+            if path.exists():
+                try:
+                    _ = faiss.read_index(str(path))
+                    print_check(name, True, f"Readable: {path}")
+                except Exception as e:
+                    ok = False
+                    print_check(name, False, f"Unreadable: {path} ({e})")
+            else:
+                print_check(name, True, f"Not present (ok)")
+        return ok
+    except ImportError as e:
+        print_check("FAISS availability", False, f"faiss not installed: {e}")
+        return False
+    except Exception as e:
+        print_check("FAISS check", False, f"Error: {e}")
+        return False
+
+
+def check_vectorizer_embed_dim():
+    """Check EMBED_DIM is defined and sane."""
+    try:
+        from services import vectorizer
+        dim = getattr(vectorizer, 'EMBED_DIM', None)
+        ok = isinstance(dim, int) and dim > 0
+        print_check("Embedding dimension", ok, f"EMBED_DIM={dim}")
+        return ok
+    except Exception as e:
+        print_check("Embedding dimension", False, f"Error: {e}")
+        return False
+
+
+def check_app_routes():
+    """Inspect FastAPI app routes to ensure key endpoints are present."""
+    try:
+        from main import app
+        paths = {getattr(r, 'path', '') for r in getattr(app, 'routes', [])}
+        expected = {
+            '/', '/health',
+            '/catalogue/add', '/catalogue/pending', '/catalogue/confirm/{pending_id}', '/catalogue/insert/{pending_id}', '/catalogue/audit/{pending_id}',
+            '/search/semantic', '/books', '/books/{book_id}'
+        }
+        missing = sorted([p for p in expected if p not in paths])
+        ok = len(missing) == 0
+        print_check("FastAPI routes", ok, "All present" if ok else ("Missing: " + ", ".join(missing)))
+        return ok
+    except Exception as e:
+        print_check("FastAPI routes", False, f"Error: {e}")
+        return False
+
+def check_artifact_dirs():
+    """Check FAISS and enhanced metadata directories."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        enhanced_dir = os.getenv('ENHANCED_BOOKS_DIR', 'data/enhanced_books')
+        faiss_dir = os.getenv('FAISS_INDEX_DIR', 'data/faiss_index')
+        ok = True
+        # Ensure enhanced dir exists and is writable
+        epath = Path(enhanced_dir)
+        if not epath.exists():
+            try:
+                epath.mkdir(parents=True, exist_ok=True)
+                print_check("Enhanced books dir", True, f"Created: {enhanced_dir}")
+            except Exception as e:
+                ok = False
+                print_check("Enhanced books dir", False, f"Cannot create: {enhanced_dir} ({e})")
+        else:
+            writable = os.access(epath, os.W_OK)
+            print_check("Enhanced books dir", writable, enhanced_dir + (" (read-only)" if not writable else ""))
+            ok = ok and writable
+        # Ensure FAISS dir exists and is writable
+        fpath = Path(faiss_dir)
+        if not fpath.exists():
+            try:
+                fpath.mkdir(parents=True, exist_ok=True)
+                print_check("FAISS index dir", True, f"Created: {faiss_dir}")
+            except Exception as e:
+                ok = False
+                print_check("FAISS index dir", False, f"Cannot create: {faiss_dir} ({e})")
+        else:
+            writable = os.access(fpath, os.W_OK)
+            print_check("FAISS index dir", writable, faiss_dir + (" (read-only)" if not writable else ""))
+            ok = ok and writable
+        return ok
+    except Exception as e:
+        print_check("Artifact directories", False, f"Error: {str(e)}")
+        return False
+
+
 def check_virtual_env():
     """Check if running in a virtual environment."""
     in_venv = hasattr(sys, 'real_prefix') or (
@@ -62,8 +220,15 @@ def check_dependencies():
         'sqlalchemy': 'sqlalchemy',
         'psycopg2': 'psycopg2',
         'pydantic': 'pydantic',
+        'requests': 'requests',
         'httpx': 'httpx',
-        'python-dotenv': 'dotenv'
+        'python-dotenv': 'dotenv',
+        # AI & Vector search
+        'google-generativeai': 'google.generativeai',
+        'faiss-cpu': 'faiss',
+        'beautifulsoup4': 'bs4',
+        'portalocker': 'portalocker',
+        'numpy': 'numpy',
     }
     
     missing = []
@@ -203,7 +368,11 @@ def check_project_structure():
         'schemas.py',
         'requirements.txt',
         'routes/',
+        'routes/search.py',
+        'routes/catalogue.py',
+        'routes/insertion.py',
         'services/',
+        'services/ai/',
         'tests/',
         'db/Schema/db_files.sql'
     ]
@@ -231,9 +400,15 @@ def main():
         ("Required Packages", check_dependencies),
         (".env Configuration", check_env_file),
         ("DATABASE_URL", check_database_url),
+        ("AI Keys", check_ai_keys),
+        ("Env Values", check_env_values),
         ("PostgreSQL", check_postgresql),
         ("Database Connection", check_database_connection),
         ("Database Tables", check_database_tables),
+        ("Artifacts", check_artifact_dirs),
+        ("EMBED_DIM", check_vectorizer_embed_dim),
+        ("FAISS Indexes", check_faiss_indexes_readable),
+        ("App Routes", check_app_routes),
     ]
     
     results = {}

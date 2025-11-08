@@ -68,6 +68,12 @@ pip install -r requirements.txt
 
 **Expected output:** Should install ~20 packages including FastAPI, SQLAlchemy, psycopg2, etc.
 
+AI enhancement and vector search packages included:
+- `google-generativeai` (embeddings and metadata extraction)
+- `faiss-cpu` (vector index)
+- `portalocker` (file-level locks for FAISS writes)
+- `beautifulsoup4` (HTML text extraction)
+
 **Common Issues:**
 - **psycopg2 fails on Windows**: Install `psycopg2-binary` instead
   ```bash
@@ -132,6 +138,14 @@ Open `.env` in any text editor and set your database credentials:
 
 ```env
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/slms
+
+# AI enhancement keys (optional but required for AI pipeline and semantic search)
+GOOGLE_API_KEY=your_google_api_key_here
+LANGSEARCH_KEY=your_langsearch_key_here
+
+# Artifact directories (defaults shown). Use absolute paths if needed.
+ENHANCED_BOOKS_DIR=data/enhanced_books
+FAISS_INDEX_DIR=data/faiss_index
 ```
 
 **IMPORTANT:** If your password contains special characters, URL-encode them:
@@ -285,6 +299,54 @@ pytest tests/ -v
 # Run specific test
 pytest tests/test_complete_workflow.py -v
 ```
+
+## Quick Reference
+
+### Common API Commands
+
+Add Book
+```bash
+curl -X POST "http://localhost:8000/catalogue/add" \
+  -H "Content-Type: application/json" \
+  -d '{"isbn":"9780132350884","title":"Clean Code","total_copies":3}'
+```
+
+List Pending
+```bash
+curl http://localhost:8000/catalogue/pending
+```
+
+Approve
+```bash
+curl -X POST "http://localhost:8000/catalogue/confirm/1" \
+  -H "Content-Type: application/json" \
+  -d '{"approved": true, "reason": "Verified"}'
+```
+
+Insert
+```bash
+curl -X POST "http://localhost:8000/catalogue/insert/1"
+```
+
+Audit Trail
+```bash
+curl http://localhost:8000/catalogue/audit/1
+```
+
+### Testing Shortcuts
+```bash
+pytest tests/ -v
+pytest tests/test_insertion.py -v
+pytest tests/ --cov=services --cov-report=html
+```
+
+Notes:
+- The AI E2E test `tests/test_ai_pipeline_e2e.py` requires `GOOGLE_API_KEY` and `LANGSEARCH_KEY`. It will skip when keys are absent.
+- In VS Code, ensure the Test Explorer uses the same interpreter and env as your terminal:
+  - Select Interpreter: `venv/Scripts/python.exe`
+  - Settings (optional):
+    - `python.testing.cwd = ${workspaceFolder}`
+    - `python.envFile = ${workspaceFolder}/.env`
 
 ## Next Steps
 

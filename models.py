@@ -4,7 +4,7 @@ Defines database tables for pending catalogue entries and audit trail.
 Extended with core library models: Publishers, Authors, Books, BookAuthors.
 """
 
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, JSON, CheckConstraint, Index
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, JSON, CheckConstraint, Index, Computed, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -202,6 +202,9 @@ class Book(Base):
     total_copies = Column(Integer, nullable=False, default=1, comment="Total number of copies")
     available_copies = Column(Integer, nullable=False, default=1, comment="Number of available copies")
     
+    # Enhanced AI-enriched metadata (stored as JSON for ORM portability)
+    enhanced_metadata = Column(JSON, nullable=True)
+    
     # Timestamps
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), nullable=True, onupdate=func.now())
@@ -236,3 +239,16 @@ class BookAuthor(Base):
     
     def __repr__(self):
         return f"<BookAuthor(book_id={self.book_id}, author_id={self.author_id})>"
+
+
+class BookFaissMap(Base):
+    __tablename__ = "book_faiss_map"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    book_id = Column(Integer, ForeignKey('books.book_id', ondelete='CASCADE'), nullable=False, index=True)
+    vector_type = Column(String, nullable=False, index=True)
+    faiss_id = Column(Integer, Computed("id", persisted=True), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    __table_args__ = (
+        UniqueConstraint('book_id', 'vector_type', name='uq_book_faiss_map'),
+    )
