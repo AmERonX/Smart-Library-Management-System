@@ -1,0 +1,19 @@
+# Smart Cataloguing Pipeline - Dependencies
+# Python 3.10+
+
+# FastAPI and server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+
+# HTTP requests
+requests>=2.32.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+python-dotenv>=1.0.0
+
+# Optional: Development and testing
+pytest>=8.3.0
+httpx>=0.28.0
