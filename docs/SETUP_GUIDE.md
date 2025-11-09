@@ -10,7 +10,7 @@ Before starting, ensure you have:
    - Check: `python --version`
    - Download: https://www.python.org/downloads/
 
-2. **PostgreSQL 12 or higher**
+2. **PostgreSQL 15 or higher**
    - Check: `psql --version`
    - Download: https://www.postgresql.org/download/
 
@@ -352,8 +352,8 @@ Notes:
 
 Once setup is complete:
 
-1. Read the [README.md](README.md) for feature overview
-2. Check [docs/WORKFLOW.md](docs/WORKFLOW.md) for complete workflow
+1. Read the [README.md](../README.md) for feature overview
+2. Check [WORKFLOW.md](WORKFLOW.md) for complete workflow
 3. Visit http://127.0.0.1:8000/docs for interactive API documentation
 4. Try the example ISBNs in README.md
 
@@ -385,12 +385,10 @@ Use this checklist to verify your setup:
 ## 📚 **Next Steps**
 
 After successful setup, explore:
-- **[docs/WORKFLOW.md](docs/WORKFLOW.md)** - Understand the complete workflow
-- **[docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md)** - Learn the API
-- **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** - Quick commands for daily use
+- **[WORKFLOW.md](WORKFLOW.md)** - Understand the complete workflow
+- **[API_ENDPOINTS.md](API_ENDPOINTS.md)** - Learn the API
+- **Quick Reference**: See the [Quick Reference](#quick-reference) section above
 
-**Before sharing with others:**
-- Review **[PACKAGING_CHECKLIST.md](PACKAGING_CHECKLIST.md)**
 
 ---
 

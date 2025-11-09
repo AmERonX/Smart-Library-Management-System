@@ -98,6 +98,27 @@ ENABLE_AI_ENHANCEMENT = os.getenv("ENABLE_AI_ENHANCEMENT", "True").lower() == "t
 GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY", None)
 LANGSEARCH_KEY: Optional[str] = os.getenv("LANGSEARCH_KEY", None)
 
+# LLM and Embedding models (plug-and-play)
+GEMINI_GENERATION_MODEL = os.getenv("GEMINI_GENERATION_MODEL", "gemini-2.5-flash-lite")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "models/text-embedding-004")
+
+# Embedding vector dimension (must match chosen embedding model)
+EMBED_DIM = int(os.getenv("EMBED_DIM", "768"))
+
+# Optional tunables
+LANGSEARCH_SEARCH_COUNT = int(os.getenv("LANGSEARCH_SEARCH_COUNT", "10"))
+LANGSEARCH_RERANK_TOPN = int(os.getenv("LANGSEARCH_RERANK_TOPN", "5"))
+GEMINI_PROMPT_MAX_CHARS = int(os.getenv("GEMINI_PROMPT_MAX_CHARS", "8000"))
+
+# Prompt template path (externalized prompt for metadata extraction)
+GEMINI_PROMPT_PATH = os.getenv("GEMINI_PROMPT_PATH", os.path.join("prompts", "gemini_metadata_prompt.txt"))
+
+# Stage flags (backward compatible with ENABLE_AI_ENHANCEMENT)
+_ai_default = os.getenv("ENABLE_AI_ENHANCEMENT", "True").lower() == "true"
+ENABLE_METADATA_ENHANCEMENT = os.getenv("ENABLE_METADATA_ENHANCEMENT", str(_ai_default)).lower() == "true"
+ENABLE_EMBEDDINGS = os.getenv("ENABLE_EMBEDDINGS", str(_ai_default)).lower() == "true"
+ENABLE_SEMANTIC_SEARCH = os.getenv("ENABLE_SEMANTIC_SEARCH", str(_ai_default)).lower() == "true"
+
 # File system paths for artifacts
 ENHANCED_BOOKS_DIR = os.getenv("ENHANCED_BOOKS_DIR", os.path.join("data", "enhanced_books"))
 FAISS_INDEX_DIR = os.getenv("FAISS_INDEX_DIR", os.path.join("data", "faiss_index"))
@@ -177,9 +198,20 @@ def get_config_summary() -> dict:
             "enabled": ENABLE_AI_ENHANCEMENT,
             "google_api_key_configured": bool(GOOGLE_API_KEY),
             "langsearch_key_configured": bool(LANGSEARCH_KEY),
+            "flags": {
+                "metadata_enhancement": ENABLE_METADATA_ENHANCEMENT,
+                "embeddings": ENABLE_EMBEDDINGS,
+                "semantic_search": ENABLE_SEMANTIC_SEARCH,
+            },
+            "models": {
+                "generation_model": GEMINI_GENERATION_MODEL,
+                "embedding_model": EMBEDDING_MODEL_NAME,
+                "embed_dim": EMBED_DIM,
+            },
             "paths": {
                 "enhanced_books_dir": ENHANCED_BOOKS_DIR,
-                "faiss_index_dir": FAISS_INDEX_DIR
+                "faiss_index_dir": FAISS_INDEX_DIR,
+                "gemini_prompt_path": GEMINI_PROMPT_PATH,
             }
         }
     }
@@ -208,6 +240,9 @@ def validate_config():
             errors.append("GOOGLE_API_KEY is required when ENABLE_AI_ENHANCEMENT and STRICT_AI_VALIDATION are true")
         if not LANGSEARCH_KEY:
             errors.append("LANGSEARCH_KEY is required when ENABLE_AI_ENHANCEMENT and STRICT_AI_VALIDATION are true")
+
+    if EMBED_DIM <= 0:
+        errors.append("EMBED_DIM must be a positive integer matching your embedding model output size")
 
     if errors:
         raise ValueError(f"Configuration errors: {', '.join(errors)}")

@@ -931,7 +931,7 @@ Client generation: use `openapi.json` with openapi-typescript-codegen to create 
 ## 📚 **Additional Resources**
 
 - **Workflow Documentation**: [WORKFLOW.md](WORKFLOW.md)
-- **Setup Guide**: [../SETUP_GUIDE.md](../SETUP_GUIDE.md)
+- **Setup Guide**: [SETUP_GUIDE.md](SETUP_GUIDE.md)
 
 ---
 

@@ -21,6 +21,7 @@ from services.query_processing import normalize_query, expand_query
 from services.vectorizer import embed_text
 from services.ai.faiss_sync import search as faiss_search
 from models import BookFaissMap, Book
+from config import ENABLE_SEMANTIC_SEARCH
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,11 @@ def _fetch_results(
 )
 def semantic_search(req: SemanticSearchRequest, db: Session = Depends(get_db)):
     try:
+        if not ENABLE_SEMANTIC_SEARCH:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Semantic search disabled by configuration (ENABLE_SEMANTIC_SEARCH=false)",
+            )
         q_raw = req.query
         q_proc = normalize_query(q_raw) if req.normalize else q_raw
         if req.expand:

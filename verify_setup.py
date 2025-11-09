@@ -90,7 +90,14 @@ def check_env_values():
             ok = False
             print_check("Server PORT", False, f"Invalid integer: {port}")
         # Optional flags sanity (do not fail build)
-        for flag in ["ENABLE_OPENLIBRARY", "ENABLE_GOOGLEBOOKS", "ENABLE_AI_ENHANCEMENT"]:
+        for flag in [
+            "ENABLE_OPENLIBRARY",
+            "ENABLE_GOOGLEBOOKS",
+            "ENABLE_AI_ENHANCEMENT",
+            "ENABLE_METADATA_ENHANCEMENT",
+            "ENABLE_EMBEDDINGS",
+            "ENABLE_SEMANTIC_SEARCH",
+        ]:
             val = os.getenv(flag, '').lower()
             if val in ('true', 'false', ''):
                 print_check(flag, True, val or "(unset)")
@@ -132,15 +139,30 @@ def check_faiss_indexes_readable():
 
 
 def check_vectorizer_embed_dim():
-    """Check EMBED_DIM is defined and sane."""
+    """Check EMBED_DIM is defined and sane (from centralized config)."""
     try:
-        from services import vectorizer
-        dim = getattr(vectorizer, 'EMBED_DIM', None)
+        from config import EMBED_DIM as dim
         ok = isinstance(dim, int) and dim > 0
         print_check("Embedding dimension", ok, f"EMBED_DIM={dim}")
         return ok
     except Exception as e:
         print_check("Embedding dimension", False, f"Error: {e}")
+        return False
+
+
+def check_prompt_template():
+    """Check if the externalized Gemini prompt template path is present (informational)."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        default_path = os.path.join('prompts', 'gemini_metadata_prompt.txt')
+        path = os.getenv('GEMINI_PROMPT_PATH', default_path)
+        exists = Path(path).exists()
+        msg = f"{path} (found)" if exists else f"{path} (not found, will use inline fallback)"
+        print_check("Gemini Prompt Template", True, msg)
+        return True
+    except Exception as e:
+        print_check("Gemini Prompt Template", False, f"Error: {e}")
         return False
 
 
@@ -406,6 +428,7 @@ def main():
         ("Database Connection", check_database_connection),
         ("Database Tables", check_database_tables),
         ("Artifacts", check_artifact_dirs),
+        ("Prompt Template", check_prompt_template),
         ("EMBED_DIM", check_vectorizer_embed_dim),
         ("FAISS Indexes", check_faiss_indexes_readable),
         ("App Routes", check_app_routes),

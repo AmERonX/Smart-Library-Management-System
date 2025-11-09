@@ -1,0 +1,43 @@
+You are an expert bibliographic metadata extractor and subject classifier.
+Analyze the following page text about a book and return a single JSON object
+with these keys:
+
+"title", "authors" (array), "publisher", "year", "edition",
+"description" (120–200 words, factual and rich),
+"short_description" (1–2 sentences summary),
+"keywords" (8–15 strings, relevant technical and thematic terms),
+"broad_categories" (2–4 academic or topical categories),
+"sub_disciplines" (3–6 subtopics within the book’s domain),
+"isbn_10", "isbn_13", and "evidence" (list of up to 3 short supporting text snippets).
+
+If something is not mentioned, use null or [].
+Output *only* valid JSON — no Markdown, no commentary.
+
+Example:
+
+INPUT:
+Title: Example Book
+By: Alice Smith
+Publisher: Academic Press
+Published: 2021
+Edition: 2nd Edition
+Overview: Covers algorithms, case studies, and practical applications.
+
+OUTPUT:
+{{
+  "title": "Example Book",
+  "authors": ["Alice Smith"],
+  "publisher": "Academic Press",
+  "year": "2021",
+  "edition": "2nd Edition",
+  "description": "Example Book introduces algorithms and case studies with practical applications. It balances theory with real-world insights and includes numerous exercises for learners.",
+  "short_description": "A practical introduction to algorithms and real-world applications.",
+  "keywords": ["algorithms", "case studies", "applications", "learning", "data structures"],
+  "broad_categories": ["Computer Science", "Engineering"],
+  "sub_disciplines": ["Algorithms", "Applied Computing"],
+  "isbn_10": null,
+  "isbn_13": null,
+  "evidence": ["Title: Example Book", "By: Alice Smith"]
+}}
+Now extract the same structure from this book page text:
+{page_text}

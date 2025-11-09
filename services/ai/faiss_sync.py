@@ -12,7 +12,7 @@ from config import (
     FAISS_IDENTITY_LOCK_PATH,
     FAISS_TOPICAL_LOCK_PATH,
 )
-from services.vectorizer import EMBED_DIM as _DIM
+from config import EMBED_DIM as _DIM
 
 
 def _ensure_dirs() -> None:

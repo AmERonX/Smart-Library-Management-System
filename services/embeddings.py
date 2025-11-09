@@ -1,13 +1,13 @@
 import os
 import json
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import numpy as np
 import google.generativeai as genai
 from sqlalchemy.orm import Session
 
-from config import GOOGLE_API_KEY, ENHANCED_BOOKS_DIR
+from config import GOOGLE_API_KEY, ENHANCED_BOOKS_DIR, ENABLE_EMBEDDINGS
 from database import SessionLocal
 from models import Book, BookFaissMap
 from services.ai import faiss_sync
@@ -20,8 +20,12 @@ if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
 
 
-def _embed_text(text: str) -> np.ndarray:
-    return embed_text_shared(text)
+def _embed_text(text: str) -> Optional[np.ndarray]:
+    try:
+        return embed_text_shared(text)
+    except RuntimeError:
+        # Likely disabled or not configured
+        return None
 
 
 def _identity_text(enhanced: Dict[str, Any]) -> str:
@@ -58,7 +62,13 @@ def _get_or_create_map(db: Session, book_id: int, vector_type: str) -> int:
     return int(row.id)
 
 
-def store_enhanced_embeddings(db: Session, book_id: int, enhanced: Dict[str, Any], identity_vec: np.ndarray, topical_vec: np.ndarray) -> Dict[str, Any]:
+def store_enhanced_embeddings(
+    db: Session,
+    book_id: int,
+    enhanced: Dict[str, Any],
+    identity_vec: Optional[np.ndarray],
+    topical_vec: Optional[np.ndarray],
+) -> Dict[str, Any]:
     book = db.query(Book).filter(Book.book_id == book_id).first()
     if not book:
         raise ValueError(f"Book not found: {book_id}")
@@ -66,11 +76,13 @@ def store_enhanced_embeddings(db: Session, book_id: int, enhanced: Dict[str, Any
     book.enhanced_metadata = enhanced
     db.commit()
 
-    identity_id = _get_or_create_map(db, book_id, "identity")
-    topical_id = _get_or_create_map(db, book_id, "topical")
-
-    faiss_sync.append("identity", identity_id, identity_vec)
-    faiss_sync.append("topical", topical_id, topical_vec)
+    identity_id = None
+    topical_id = None
+    if ENABLE_EMBEDDINGS and identity_vec is not None and topical_vec is not None:
+        identity_id = _get_or_create_map(db, book_id, "identity")
+        topical_id = _get_or_create_map(db, book_id, "topical")
+        faiss_sync.append("identity", identity_id, identity_vec)
+        faiss_sync.append("topical", topical_id, topical_vec)
 
     # Optional export to filesystem
     try:
@@ -83,8 +95,8 @@ def store_enhanced_embeddings(db: Session, book_id: int, enhanced: Dict[str, Any
 
     return {
         "book_id": book_id,
-        "identity_faiss_id": identity_id,
-        "topical_faiss_id": topical_id,
+        "identity_faiss_id": int(identity_id) if identity_id is not None else None,
+        "topical_faiss_id": int(topical_id) if topical_id is not None else None,
     }
 
 
@@ -106,10 +118,13 @@ def enhance_and_store(book_id: int, engine=None) -> Dict[str, Any]:
         }
         enhanced = metadata_enhancer.enhance(base)
 
-        identity_text = _identity_text(enhanced)
-        topical_text = _topical_text(enhanced)
-        identity_vec = _embed_text(identity_text)
-        topical_vec = _embed_text(topical_text)
+        identity_vec = None
+        topical_vec = None
+        if ENABLE_EMBEDDINGS:
+            identity_text = _identity_text(enhanced)
+            topical_text = _topical_text(enhanced)
+            identity_vec = _embed_text(identity_text)
+            topical_vec = _embed_text(topical_text)
 
         return store_enhanced_embeddings(db, book_id, enhanced, identity_vec, topical_vec)
     except Exception as e:

@@ -7,7 +7,16 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 
-from config import GOOGLE_API_KEY, LANGSEARCH_KEY
+from config import (
+    GOOGLE_API_KEY,
+    LANGSEARCH_KEY,
+    GEMINI_GENERATION_MODEL,
+    LANGSEARCH_SEARCH_COUNT,
+    LANGSEARCH_RERANK_TOPN,
+    GEMINI_PROMPT_MAX_CHARS,
+    GEMINI_PROMPT_PATH,
+    ENABLE_METADATA_ENHANCEMENT,
+)
 
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
@@ -47,6 +56,16 @@ def _langsearch_rerank(query: str, docs: List[str], top_n: Optional[int] = None,
         return []
 
 
+def _load_prompt_template() -> Optional[str]:
+    try:
+        if GEMINI_PROMPT_PATH and os.path.exists(GEMINI_PROMPT_PATH):
+            with open(GEMINI_PROMPT_PATH, "r", encoding="utf-8") as f:
+                return f.read()
+    except Exception:
+        return None
+    return None
+
+
 def _fetch_page(url: str, timeout: int = 8) -> Optional[str]:
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
@@ -69,61 +88,34 @@ def _clean_visible_text(html: str) -> str:
 def _extract_with_gemini(page_text: str) -> Optional[Dict[str, Any]]:
     if not GOOGLE_API_KEY:
         return None
-    prompt = f"""
+    template = _load_prompt_template()
+    if template:
+        try:
+            prompt = template.format(page_text=page_text[:GEMINI_PROMPT_MAX_CHARS])
+        except Exception:
+            prompt = f"{template}\n\n{page_text[:GEMINI_PROMPT_MAX_CHARS]}"
+    else:
+        # Fallback inline prompt (kept for robustness if template missing)
+        prompt = f"""
 You are an expert bibliographic cataloguer and subject indexer for academic and technical books.
 Your task is to analyze the following page text and produce structured JSON metadata that captures both
-bibliographic details and intellectual content. You must distinguish between *descriptive* metadata and
-*subject-level* conceptual information.
+bibliographic details and intellectual content. Distinguish between descriptive metadata and subject-level concepts.
 
 Return a single JSON object with these exact keys:
-"title", "authors" (array of all author names), "publisher", "year", "edition",
-"description" (a factual 120–200 word summary of the book's purpose, topics, and coverage — NOT marketing text),
-"keywords" (8–12 concept-level terms, describing the *core technical or thematic ideas* discussed in the book.
-Exclude any words related to format, publisher, author names, or edition information. Prefer nouns like
-'data modeling', 'query optimization', 'sql', 'distributed systems', 'database design'),
-"broad_categories" (3–5 general academic or topical areas),
-"sub_disciplines" (3–6 fine-grained domains under those categories, e.g., 'Relational Databases', 'Concurrency Control'),
-"isbn_10", "isbn_13", and "evidence" (list of up to 3 short text snippets that support your extracted data).
+"title", "authors" (array of names), "publisher", "year", "edition",
+"description" (120–200 word factual summary),
+"keywords" (8–12 concept-level terms; avoid format/publisher/author words),
+"broad_categories" (3–5 areas),
+"sub_disciplines" (3–6 domains),
+"isbn_10", "isbn_13", and "evidence" (up to 3 short supporting snippets).
 
-If any field is missing, use null or [].
-Return strictly valid JSON — no Markdown, no commentary, no code fences.
-
-Example:
-{
-  {
-  "title": "Example Book",
-  "authors": ["Alice Smith", "Bob Dylan"],
-  "publisher": "Academic Press",
-  "year": "2021",
-  "edition": "2nd Edition",
-  "description": "This book provides a structured introduction to algorithmic design and analysis...",
-  "keywords": ["algorithm analysis", "computational complexity", "graph algorithms", "dynamic programming"],
-  "broad_categories": ["Computer Science", "Mathematics"],
-  "sub_disciplines": ["Algorithms", "Combinatorial Optimization", "Computational Theory"],
-  "isbn_10": "1234567890",
-  "isbn_13": "9781234567890",
-  "evidence": ["Title: Example Book", "By Smith and Dylan", "Published 2021 by Academic Press"]
-  },
-  {
-  "title": "Artificial Intelligence: A Modern Approach",
-  "authors": ["Stuart Russell", "Peter Norvig"],
-  "publisher": "Pearson",
-  "year": "2021",
-  "description": "Standard reference for AI theory and practice, from search and reasoning to deep learning...",
-  "keywords": ["artificial intelligence", "Intelligent Agents","machine learning", "reasoning", "planning", "neural networks"],
-  "broad_categories": ["Computer Science", "Mathematics", "Engineering"],
-  "sub_disciplines": [ "Machine Learning", "Deep Learning", "Natural language processing", "Reinforcemett Learning", " "],
-  "isbn_10": "null",
-  "isbn_13": "null",
-  "evidence": ["Title: Artificial Intelligence: A Modern Approach", "By Russell and Norvig", "Published 2021 by Pearson"]
-  }
-}
+If any field is missing, use null or []. Return strictly valid JSON only.
 
 Now extract this same structure from the following book page text:
-{page_text[:8000]}
+{page_text[:GEMINI_PROMPT_MAX_CHARS]}
 """
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        model = genai.GenerativeModel(GEMINI_GENERATION_MODEL)
         resp = model.generate_content(prompt)
         text = (resp.text or "").strip().replace("```json", "").replace("```", "")
         return json.loads(text)
@@ -132,12 +124,29 @@ Now extract this same structure from the following book page text:
 
 
 def enhance(book_record: Dict[str, Any]) -> Dict[str, Any]:
+    # If metadata enhancement is disabled, return a pass-through structure
+    if not ENABLE_METADATA_ENHANCEMENT:
+        return {
+            "title": book_record.get("title"),
+            "authors": book_record.get("authors") or [],
+            "publisher": book_record.get("publisher"),
+            "publication_year": book_record.get("year"),
+            "edition": book_record.get("edition"),
+            "description": None,
+            "keywords": [],
+            "broad_categories": [],
+            "sub_disciplines": [],
+            "isbn_10": book_record.get("isbn_10"),
+            "isbn_13": book_record.get("isbn_13"),
+            "evidence": [],
+            "source": "disabled",
+        }
     title = book_record.get("title") or ""
     authors = ", ".join(book_record.get("authors") or [])
     isbn = book_record.get("isbn") or book_record.get("isbn_13") or book_record.get("isbn_10") or ""
     query = f"{title} by {authors}" + (f" (ISBN {isbn})" if isbn else "")
 
-    results = _langsearch_search(query, count=10)
+    results = _langsearch_search(query, count=LANGSEARCH_SEARCH_COUNT)
     urls: List[Optional[str]] = []
     docs: List[str] = []
     for r in results:
@@ -149,7 +158,7 @@ def enhance(book_record: Dict[str, Any]) -> Dict[str, Any]:
     extracted: Optional[Dict[str, Any]] = None
     tried: set[int] = set()
 
-    ranked_indices: List[int] = _langsearch_rerank(query, docs, top_n=min(5, len(docs))) if docs else []
+    ranked_indices: List[int] = _langsearch_rerank(query, docs, top_n=min(LANGSEARCH_RERANK_TOPN, len(docs))) if docs else []
     if ranked_indices:
         for idx in ranked_indices:
             if 0 <= idx < len(urls) and urls[idx]:

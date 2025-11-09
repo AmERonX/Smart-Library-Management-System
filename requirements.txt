@@ -1,5 +1,5 @@
 # Smart Cataloguing Pipeline - Dependencies
-# Python 3.10+
+Python 3.10+
 
 # FastAPI and server
 fastapi>=0.115.0

@@ -4,6 +4,24 @@
 
 A complete FastAPI-based library management system with automatic metadata extraction, librarian confirmation workflow, and intelligent book cataloguing.
 
+## Installation
+
+```bash
+# Clone
+git clone https://github.com/AmERonX/Smart-Library-Management-System.git
+cd Smart-Library-Management-System
+
+# Create and activate venv (Windows)
+python -m venv .venv && .\.venv\Scripts\activate
+# or (Linux/Mac)
+python3 -m venv .venv && source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+For full setup and troubleshooting, see [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md).
+
 ## 🎯 Features
 
 ### Core Features
@@ -32,7 +50,7 @@ A complete FastAPI-based library management system with automatic metadata extra
 
 ## Quick Start
 
-**🚀 New User?** Follow [SETUP_GUIDE.md](SETUP_GUIDE.md) for complete step-by-step instructions.
+**🚀 New User?** Follow [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) for complete step-by-step instructions.
 
 **Quick Setup:**
 
@@ -66,6 +84,41 @@ uvicorn main:app --reload  # Linux/Mac
 - Main: http://localhost:8000
 - Docs: http://localhost:8000/docs
 - Health: http://localhost:8000/health
+
+---
+
+## ⚙️ AI Configuration Quick Start
+
+Configure AI features via environment variables (in `.env` or your shell). If the three flags below are unset, each defaults to `ENABLE_AI_ENHANCEMENT` (default: true).
+
+- **Flags**
+  - `ENABLE_METADATA_ENHANCEMENT` — enable Gemini-based metadata extraction
+  - `ENABLE_EMBEDDINGS` — enable text embeddings generation and FAISS writes
+  - `ENABLE_SEMANTIC_SEARCH` — enable `/search/semantic` API
+  - Legacy default: `ENABLE_AI_ENHANCEMENT`
+
+- **Prompt template**
+  - `GEMINI_PROMPT_PATH` — path to metadata prompt file (default: `prompts/gemini_metadata_prompt.txt`)
+
+- **Models and dimensions**
+  - `GEMINI_GENERATION_MODEL` (e.g., `gemini-2.5-flash-lite`)
+  - `EMBEDDING_MODEL_NAME` (e.g., `models/text-embedding-004`)
+  - `EMBED_DIM` (must match embedding model output size)
+
+Example:
+```env
+ENABLE_METADATA_ENHANCEMENT=true
+ENABLE_EMBEDDINGS=true
+ENABLE_SEMANTIC_SEARCH=true
+GEMINI_PROMPT_PATH=prompts/gemini_metadata_prompt.txt
+GEMINI_GENERATION_MODEL=gemini-2.5-flash-lite
+EMBEDDING_MODEL_NAME=models/text-embedding-004
+EMBED_DIM=768
+```
+
+Verify configuration quickly: `python verify_setup.py`.
+
+Note: Changing `EMBED_DIM` or `EMBEDDING_MODEL_NAME` requires rebuilding FAISS indexes in `data/faiss_index/`.
 
 ---
 
@@ -162,26 +215,23 @@ curl -X POST "http://localhost:8000/search/semantic" \
 - Interactive docs: http://localhost:8000/docs
 - Run tests: `pytest tests/ -v`
 
-For detailed API documentation, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md). See [CHANGELOG.md](CHANGELOG.md) for recent changes.
+For detailed API documentation, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md). See [CHANGELOG.md](docs/CHANGELOG.md) for recent changes.
 
 
 
 ## 📚 **Documentation Index**
 
-**Not sure where to start?** See **[DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md)** for a guided navigation.
+**Not sure where to start?**
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| **[SETUP_GUIDE.md](SETUP_GUIDE.md)** ⭐ | Complete step-by-step installation guide | New users, deployment |
-| **[PACKAGING_CHECKLIST.md](PACKAGING_CHECKLIST.md)** | Pre-deployment checklist | Developers sharing code |
+| **[SETUP_GUIDE.md](docs/SETUP_GUIDE.md)** ⭐ | Complete step-by-step installation guide | New users, deployment |
 | **[verify_setup.py](verify_setup.py)** | Automated setup verification | All users |
 | **[docs/WORKFLOW.md](docs/WORKFLOW.md)** ⭐ | Complete workflow with diagrams | Developers, architects |
 | **[docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md)** ⭐ | Full API reference | Frontend developers |
-| **[personal_notes.md](personal_notes.md)** | Development progress tracker | Internal use only |
-| **[CHANGELOG.md](CHANGELOG.md)** | Consolidated log of changes | All |
+| **[CHANGELOG.md](docs/CHANGELOG.md)** | Consolidated log of changes | All |
 
 **⭐ = Start here for new users**
-
 
 
 
