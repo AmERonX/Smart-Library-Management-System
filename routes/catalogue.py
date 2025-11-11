@@ -14,6 +14,7 @@ from database import get_db, Base
 from models import PendingCatalogue, CatalogueAudit
 from schemas import (
     CatalogueAddRequest,
+    MetadataFetchRequest,
     CatalogueAddResponse,
     PendingCatalogueResponse,
     PendingEditRequest,
@@ -80,6 +81,99 @@ def create_audit_log(
 # API ENDPOINTS
 # ============================================================================
 
+@router.post("/fetch-metadata")
+async def fetch_metadata_only(
+    request: MetadataFetchRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch metadata from external APIs without creating a pending entry.
+    Used for preview before submission.
+    
+    This endpoint:
+    1. Validates input (ISBN format if provided)
+    2. Fetches metadata from Open Library and Google Books APIs
+    3. Returns metadata preview without creating any database entries
+    
+    Args:
+        request: Book input data (isbn, title, authors)
+        db: Database session (injected, not used but required for dependency)
+        
+    Returns:
+        Dictionary with success flag and metadata_preview
+        
+    Raises:
+        HTTPException 400: If validation fails
+        HTTPException 500: If metadata fetching fails
+    """
+    try:
+        logger.info(f"Fetching metadata (preview only): isbn={request.isbn}, title={request.title}")
+        
+        # Import metadata fetching functions from main.py
+        from main import (
+            fetch_openlibrary_metadata,
+            fetch_googlebooks_metadata,
+            merge_metadata,
+            BookInput
+        )
+        
+        # Create BookInput for metadata fetching
+        # Title is already cleaned by the schema validator
+        book_input = BookInput(
+            isbn=request.isbn,
+            title=request.title,
+            authors=request.authors,
+            total_copies=1  # Not used for metadata fetching
+        )
+        
+        # Try Open Library first (only if ISBN provided)
+        primary_metadata = None
+        if request.isbn:
+            primary_metadata = fetch_openlibrary_metadata(request.isbn)
+        
+        # Try Google Books as fallback
+        fallback_metadata = None
+        if request.isbn:
+            fallback_metadata = fetch_googlebooks_metadata(isbn=request.isbn)
+        elif request.title:
+            fallback_metadata = fetch_googlebooks_metadata(
+                title=request.title,
+                authors=request.authors
+            )
+        
+        # Merge metadata from both sources
+        merged_metadata = merge_metadata(primary_metadata, fallback_metadata, book_input)
+        
+        if merged_metadata:
+            metadata_preview = {
+                "title": merged_metadata.get('title'),
+                "authors": merged_metadata.get('authors'),
+                "publisher": merged_metadata.get('publisher'),
+                "publication_year": merged_metadata.get('publication_year'),
+                "isbn_10": merged_metadata.get('isbn_10'),
+                "isbn_13": merged_metadata.get('isbn_13'),
+                "source": merged_metadata.get('source')
+            }
+            
+            return {
+                "success": True,
+                "metadata_preview": metadata_preview
+            }
+        else:
+            return {
+                "success": False,
+                "metadata_preview": None,
+                "message": "No metadata found from external APIs"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching metadata: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch metadata: {str(e)}"
+        )
+
+
 @router.post("/add", response_model=CatalogueAddResponse, status_code=status.HTTP_201_CREATED)
 async def add_book_to_pending_catalogue(
     request: CatalogueAddRequest,
@@ -110,7 +204,7 @@ async def add_book_to_pending_catalogue(
         HTTPException 500: If database operation fails
     """
     try:
-        logger.info(f"Received request to add book: title={request.title}, isbn={request.isbn}")
+        logger.info(f"Adding book to pending catalogue: title={request.title}, isbn={request.isbn}")
         
         # Ensure required tables exist for the current DB bind (useful in test DBs)
         try:
@@ -121,9 +215,12 @@ async def add_book_to_pending_catalogue(
             pass
 
         # Step 1: Create pending catalogue entry with status='pending'
+        # Clean up placeholder title if present
+        title = request.title if request.title != "Fetching title..." else ""
+        
         pending_entry = PendingCatalogue(
             isbn=request.isbn,
-            title=request.title,
+            title=title,
             authors=request.authors,
             total_copies=request.total_copies,
             raw_metadata=None,
@@ -143,7 +240,7 @@ async def add_book_to_pending_catalogue(
             pending_id=pending_entry.id,
             action='input_received',
             source='frontend',
-            details=f"Book added: {request.title}"
+            details=f"Book added: {title or request.isbn or 'Unknown'}"
         )
         
         # Step 3: Fetch metadata from external APIs
@@ -160,9 +257,10 @@ async def add_book_to_pending_catalogue(
             logger.info(f"Fetching metadata for pending_id={pending_entry.id}")
             
             # Create BookInput for metadata fetching
+            # Use cleaned title (not placeholder)
             book_input = BookInput(
                 isbn=request.isbn,
-                title=request.title,
+                title=title if title else None,
                 authors=request.authors,
                 total_copies=request.total_copies
             )
@@ -390,7 +488,8 @@ async def get_pending_books(db: Session = Depends(get_db)):
     
     Returns all entries with status='awaiting_confirmation' or 'failed', ordered by
     creation date (oldest first) for FIFO processing. Failed entries allow librarians
-    to manually enter metadata when API extraction fails.
+    to manually enter metadata when API extraction fails. Rejected and completed entries
+    are excluded from this list.
     
     Args:
         db: Database session (injected)
@@ -539,8 +638,8 @@ async def confirm_book_metadata(
         else:
             logger.info(f"Rejecting metadata for pending_id={pending_id}")
             
-            # Update status to failed
-            pending_entry.status = 'failed'
+            # Update status to rejected
+            pending_entry.status = 'rejected'
             
             # Create audit log with rejection reason
             create_audit_log(

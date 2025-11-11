@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pending Catalogue - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="add-book.html">Add Book</a></li>
+        <li><a href="pending.html" class="active">Pending</a></li>
+        <li><a href="catalogue.html">Catalogue</a></li>
+        <li><a href="#" onclick="handleAdminLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1>Pending Catalogue</h1>
+          <p class="subtitle">Review and approve book metadata before adding to catalogue</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+          <label class="form-check" style="margin: 0;">
+            <input type="checkbox" class="form-check-input" id="autoRefreshToggle" checked>
+            <span class="form-check-label">Auto-refresh</span>
+          </label>
+          <button class="btn btn-outline" onclick="refreshPendingList()">
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Filters and Search -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: 1fr auto auto; gap: var(--spacing-md); align-items: end;">
+          <!-- Search -->
+          <div class="form-group mb-0">
+            <label for="searchInput" class="form-label">Search</label>
+            <input 
+              type="text" 
+              id="searchInput" 
+              class="form-control" 
+              placeholder="Search by title, ISBN, or authors..."
+            >
+          </div>
+          
+          <!-- Status Filter -->
+          <div class="form-group mb-0">
+            <label for="statusFilter" class="form-label">Status</label>
+            <select id="statusFilter" class="form-control">
+              <option value="all">All</option>
+              <option value="awaiting_confirmation" selected>Awaiting Confirmation</option>
+              <option value="failed">Failed</option>
+              <option value="approved">Approved</option>
+            </select>
+          </div>
+          
+          <!-- Clear Filters -->
+          <button class="btn btn-outline" onclick="clearFilters()">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Table -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Pending Entries</h2>
+        <span id="entryCount" class="badge badge-info">Loading...</span>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <div id="pendingTableContainer">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading pending entries...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="paginationContainer">
+      <!-- Pagination will be rendered here -->
+    </div>
+  </main>
+
+  <!-- Review Modal -->
+  <div id="reviewModal" class="modal-overlay hidden" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Review Book Metadata</h3>
+        <button class="modal-close" onclick="closeReviewModal()">×</button>
+      </div>
+      <div class="modal-body" id="reviewModalBody">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+      <div class="modal-footer" id="reviewModalFooter">
+        <!-- Footer buttons will be rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal-overlay hidden" onclick="closeEditModalOnOverlay(event)">
+    <div class="modal" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3>Edit Book Metadata</h3>
+        <button class="modal-close" onclick="closeEditModal()">×</button>
+      </div>
+      <div class="modal-body" id="editModalBody">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+      <div class="modal-footer" id="editModalFooter">
+        <!-- Footer buttons will be rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-admin.js"></script>
+  <script src="js/pages/pending.js"></script>
+</body>
+</html>
+

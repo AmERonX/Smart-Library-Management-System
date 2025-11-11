@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Books Catalogue - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="add-book.html">Add Book</a></li>
+        <li><a href="pending.html">Pending</a></li>
+        <li><a href="catalogue.html" class="active">Catalogue</a></li>
+        <li><a href="#" onclick="handleAdminLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <h1>Books Catalogue</h1>
+      <p class="subtitle">Browse and search all books in the library</p>
+    </header>
+
+    <!-- Search and Filters -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+          <!-- Search -->
+          <div class="search-bar">
+            <span class="search-bar-icon">🔍</span>
+            <input 
+              type="text" 
+              id="searchInput" 
+              placeholder="Search by title, author, or ISBN..."
+            >
+          </div>
+          
+          <!-- View Toggle -->
+          <div class="btn-group">
+            <button class="btn btn-outline active" id="gridViewBtn" onclick="switchView('grid')">
+              ⊞ Grid
+            </button>
+            <button class="btn btn-outline" id="listViewBtn" onclick="switchView('list')">
+              ☰ List
+            </button>
+          </div>
+        </div>
+
+        <!-- Advanced Filters (Collapsible) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+          <div class="form-group mb-0">
+            <label for="authorFilter" class="form-label">Author</label>
+            <input 
+              type="text" 
+              id="authorFilter" 
+              class="form-control" 
+              placeholder="Filter by author"
+            >
+          </div>
+          
+          <div class="form-group mb-0">
+            <label for="publisherFilter" class="form-label">Publisher</label>
+            <input 
+              type="text" 
+              id="publisherFilter" 
+              class="form-control" 
+              placeholder="Filter by publisher"
+            >
+          </div>
+          
+          <div class="form-group mb-0">
+            <label for="yearFilter" class="form-label">Year</label>
+            <input 
+              type="text" 
+              id="yearFilter" 
+              class="form-control" 
+              placeholder="e.g. 2008"
+            >
+          </div>
+          
+          <div class="form-group mb-0">
+            <label for="sortFilter" class="form-label">Sort By</label>
+            <select id="sortFilter" class="form-control">
+              <option value="created_desc">Newest First</option>
+              <option value="title_asc">Title (A-Z)</option>
+              <option value="year_desc">Year (Newest)</option>
+              <option value="year_asc">Year (Oldest)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--spacing-md); text-align: center;">
+          <button class="btn btn-outline btn-sm" onclick="clearFilters()">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Count -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+      <p class="text-muted" id="resultsCount">Loading...</p>
+      <button class="btn btn-outline btn-sm" onclick="loadBooks()">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <!-- Books Grid/List Container -->
+    <div id="booksContainer">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading books...</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="paginationContainer">
+      <!-- Pagination will be rendered here -->
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-admin.js"></script>
+  <script src="js/pages/catalogue.js"></script>
+</body>
+</html>
+

@@ -52,7 +52,9 @@ For full setup and troubleshooting, see [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.m
 
 **🚀 New User?** Follow [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) for complete step-by-step instructions.
 
-**Quick Setup:**
+**Prerequisites:** Python 3.10+, PostgreSQL 12+
+
+### Quick Setup
 
 ```bash
 # 1. Install dependencies
@@ -72,18 +74,52 @@ psql -U postgres -d slms -f db/Schema/db_files.sql
 
 # 4. Verify setup
 python verify_setup.py
-
-# 5. Start server
-.\start_server.ps1  # Windows
-uvicorn main:app --reload  # Linux/Mac
 ```
 
-**Prerequisites:** Python 3.10+, PostgreSQL 12+
+### Starting the Servers
 
-**Access the API:**
-- Main: http://localhost:8000
-- Docs: http://localhost:8000/docs
-- Health: http://localhost:8000/health
+**Option 1: Use PowerShell Scripts (Windows - Recommended)**
+```powershell
+# Terminal 1 - Backend:
+.\start_server.ps1
+
+# Terminal 2 - Frontend:
+.\start_frontend.ps1
+```
+
+**Option 2: Manual Start**
+```bash
+# Terminal 1 - Backend:
+.\venv\Scripts\Activate.ps1  # Windows
+python main.py
+
+# Terminal 2 - Frontend:
+cd slms-frontend
+python -m http.server 3000 --bind 127.0.0.1
+```
+
+**Access Points:**
+- **Backend API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **Frontend**: http://localhost:3000
+- **Admin Dashboard**: http://localhost:3000/index.html
+- **User Portal**: http://localhost:3000/login.html
+
+### Quick Test
+
+```bash
+# Test backend health
+curl http://localhost:8000/health
+
+# Test user registration (from browser)
+# Go to http://localhost:3000/login.html → Register tab
+```
+
+**Troubleshooting:**
+- **Port already in use**: `netstat -ano | findstr :8000` then `taskkill /PID <PID> /F`
+- **Database connection error**: Check `.env` file and ensure PostgreSQL is running
+- **CORS error**: Backend CORS is configured to allow all origins
 
 ---
 

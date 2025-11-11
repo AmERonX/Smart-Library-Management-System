@@ -113,11 +113,20 @@ GEMINI_PROMPT_MAX_CHARS = int(os.getenv("GEMINI_PROMPT_MAX_CHARS", "8000"))
 # Prompt template path (externalized prompt for metadata extraction)
 GEMINI_PROMPT_PATH = os.getenv("GEMINI_PROMPT_PATH", os.path.join("prompts", "gemini_metadata_prompt.txt"))
 
+# Query enrichment prompt/model configuration
+QUERY_REWRITER_MODEL = os.getenv("QUERY_REWRITER_MODEL", "gemini-2.5-flash-lite")
+QUERY_REWRITER_PROMPT_PATH = os.getenv(
+    "QUERY_REWRITER_PROMPT_PATH",
+    os.path.join("prompts", "query_rewriter_prompt.txt"),
+)
+ENABLE_SEMANTIC_QUERY_NORMALIZE = os.getenv("ENABLE_SEMANTIC_QUERY_NORMALIZE", "True").lower() == "true"
+
 # Stage flags (backward compatible with ENABLE_AI_ENHANCEMENT)
 _ai_default = os.getenv("ENABLE_AI_ENHANCEMENT", "True").lower() == "true"
 ENABLE_METADATA_ENHANCEMENT = os.getenv("ENABLE_METADATA_ENHANCEMENT", str(_ai_default)).lower() == "true"
 ENABLE_EMBEDDINGS = os.getenv("ENABLE_EMBEDDINGS", str(_ai_default)).lower() == "true"
 ENABLE_SEMANTIC_SEARCH = os.getenv("ENABLE_SEMANTIC_SEARCH", str(_ai_default)).lower() == "true"
+ENABLE_QUERY_REWRITER = os.getenv("ENABLE_QUERY_REWRITER", str(_ai_default)).lower() == "true"
 
 # File system paths for artifacts
 ENHANCED_BOOKS_DIR = os.getenv("ENHANCED_BOOKS_DIR", os.path.join("data", "enhanced_books"))

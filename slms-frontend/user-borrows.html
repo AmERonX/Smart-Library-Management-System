@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Borrows - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="user-dashboard.html">Dashboard</a></li>
+        <li><a href="user-browse.html">Browse Books</a></li>
+        <li><a href="user-borrows.html" class="active">My Borrows</a></li>
+        <li><a href="user-reservations.html">Reservations</a></li>
+        <li><a href="user-fines.html">Fines</a></li>
+        <li><a href="#" onclick="handleLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <div>
+        <h1>My Borrows</h1>
+        <p class="subtitle">View and manage your borrowed books</p>
+      </div>
+      <div>
+        <button class="btn btn-outline" onclick="loadActiveBorrows()">Active Borrows</button>
+        <button class="btn btn-outline" onclick="loadBorrowHistory()">History</button>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="card mb-3">
+      <div class="card-body" style="padding: 0;">
+        <div style="display: flex; border-bottom: 2px solid var(--gray-200);">
+          <button id="activeTab" class="tab-btn active" onclick="switchTab('active')" style="flex: 1; padding: var(--spacing-md); background: none; border: none; border-bottom: 2px solid var(--primary-color); cursor: pointer;">
+            Active Borrows
+          </button>
+          <button id="historyTab" class="tab-btn" onclick="switchTab('history')" style="flex: 1; padding: var(--spacing-md); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;">
+            Borrow History
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Borrows -->
+    <div id="activeBorrowsSection" class="card">
+      <div class="card-header">
+        <h2>Active Borrows</h2>
+      </div>
+      <div class="card-body">
+        <div id="activeBorrowsContainer">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Borrow History -->
+    <div id="historySection" class="card" style="display: none;">
+      <div class="card-header">
+        <h2>Borrow History</h2>
+      </div>
+      <div class="card-body">
+        <div id="historyContainer">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pages/user-borrows.js"></script>
+</body>
+</html>
+

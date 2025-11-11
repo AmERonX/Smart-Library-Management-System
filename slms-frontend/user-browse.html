@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Books - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="user-dashboard.html">Dashboard</a></li>
+        <li><a href="user-browse.html" class="active">Browse Books</a></li>
+        <li><a href="user-borrows.html">My Borrows</a></li>
+        <li><a href="user-reservations.html">Reservations</a></li>
+        <li><a href="user-fines.html">Fines</a></li>
+        <li><a href="#" onclick="handleLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <div>
+        <h1>Browse Books</h1>
+        <p class="subtitle">Search and borrow books from the library</p>
+      </div>
+    </header>
+
+    <!-- Search and Filters -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: 1fr auto auto auto; gap: var(--spacing-md); align-items: end;">
+          <div class="form-group mb-0">
+            <label for="searchInput" class="form-label">Search</label>
+            <input 
+              type="text" 
+              id="searchInput" 
+              class="form-control" 
+              placeholder="Search by title, author, or publisher..."
+            >
+          </div>
+          <div class="form-group mb-0">
+            <label for="searchTypeSelect" class="form-label">Search Type</label>
+            <select id="searchTypeSelect" class="form-control">
+              <option value="keyword">Keyword</option>
+              <option value="semantic">Semantic (AI)</option>
+            </select>
+          </div>
+          <div class="form-group mb-0">
+            <label for="sortSelect" class="form-label">Sort</label>
+            <select id="sortSelect" class="form-control">
+              <option value="created_desc">Newest First</option>
+              <option value="title_asc">Title A-Z</option>
+              <option value="year_desc">Year (Newest)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="searchBooks()">Search</button>
+        </div>
+
+        <div id="semanticOptions" style="display: none; margin-top: var(--spacing-md); gap: var(--spacing-md); align-items: center;">
+          <div class="form-group mb-0">
+            <label for="semanticModeSelect" class="form-label">Semantic Mode</label>
+            <select id="semanticModeSelect" class="form-control">
+              <option value="hybrid">Hybrid (Identity + Topical)</option>
+              <option value="identity">Identity (Exact Matches)</option>
+              <option value="topical">Topical (Conceptual)</option>
+            </select>
+          </div>
+          <div class="form-group mb-0">
+            <label for="semanticTopKInput" class="form-label">Top Results</label>
+            <input type="number" id="semanticTopKInput" class="form-control" min="1" max="20" step="1" value="10">
+          </div>
+          <div class="form-group mb-0" style="display: flex; align-items: center; gap: var(--spacing-sm); margin-top: 1.75rem;">
+            <input type="checkbox" id="semanticExpandCheckbox">
+            <label for="semanticExpandCheckbox" class="form-label" style="margin: 0;">Expand with synonyms</label>
+          </div>
+          <div class="text-muted" style="margin-top: 1.9rem; font-size: 0.85rem;">
+            Semantic search may take a few seconds.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="searchStatus" class="alert alert-info" style="display: none; margin-bottom: var(--spacing-md);"></div>
+
+    <!-- Books Grid -->
+    <div id="booksContainer">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading books...</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="paginationContainer"></div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pages/user-browse.js"></script>
+</body>
+</html>
+

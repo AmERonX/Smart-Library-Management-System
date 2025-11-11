@@ -4,10 +4,11 @@ Defines database tables for pending catalogue entries and audit trail.
 Extended with core library models: Publishers, Authors, Books, BookAuthors.
 """
 
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, JSON, CheckConstraint, Index, Computed, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, JSON, CheckConstraint, Index, Computed, UniqueConstraint, DECIMAL, Enum as SQLEnum, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+import enum
 
 
 class PendingCatalogue(Base):
@@ -252,3 +253,146 @@ class BookFaissMap(Base):
     __table_args__ = (
         UniqueConstraint('book_id', 'vector_type', name='uq_book_faiss_map'),
     )
+
+
+# ============================================================================
+# USER MODELS
+# ============================================================================
+
+class UserRole(str, enum.Enum):
+    """User role enumeration"""
+    student = "student"
+    admin = "admin"
+    librarian = "librarian"
+
+
+class ReservationStatus(str, enum.Enum):
+    """Reservation status enumeration"""
+    active = "active"
+    fulfilled = "fulfilled"
+    cancelled = "cancelled"
+
+
+class FineStatus(str, enum.Enum):
+    """Fine status enumeration"""
+    pending = "pending"
+    paid = "paid"
+
+
+class User(Base):
+    """
+    Model for library users (students, faculty, librarians).
+    """
+    __tablename__ = "users"
+    
+    user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=False, index=True)
+    password_hash = Column(Text, nullable=False)
+    # Database uses user_role ENUM - we use SQLEnum to map it properly
+    # PostgreSQL will accept string values that match ENUM values, so String should work
+    # But we'll use explicit type casting in the route to be safe
+    # Use String type - PostgreSQL ENUM accepts string values that match ENUM values
+    # The database will validate the value matches the ENUM
+    role = Column(String(20), nullable=False, default='student')
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=True, onupdate=func.now())
+    
+    # Relationships
+    borrows = relationship("BorrowRecord", back_populates="user", cascade="all, delete-orphan")
+    reservations = relationship("Reservation", back_populates="user", cascade="all, delete-orphan")
+    fines = relationship("Fine", back_populates="user", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<User(id={self.user_id}, username={self.username}, role={self.role})>"
+
+
+class BorrowRecord(Base):
+    """
+    Model for book borrowing records.
+    """
+    __tablename__ = "borrow_records"
+    
+    borrow_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    book_id = Column(Integer, ForeignKey('books.book_id', ondelete='CASCADE'), nullable=False, index=True)
+    borrow_date = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    due_date = Column(TIMESTAMP(timezone=True), nullable=False)
+    return_date = Column(TIMESTAMP(timezone=True), nullable=True)
+    
+    # Relationships
+    user = relationship("User", back_populates="borrows")
+    book = relationship("Book")
+    fine = relationship("Fine", back_populates="borrow_record", uselist=False, cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        CheckConstraint('due_date > borrow_date', name='check_due_after_borrow'),
+    )
+    
+    def __repr__(self):
+        return f"<BorrowRecord(id={self.borrow_id}, user_id={self.user_id}, book_id={self.book_id})>"
+
+
+class Reservation(Base):
+    """
+    Model for book reservations.
+    """
+    __tablename__ = "reservations"
+    
+    reservation_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    book_id = Column(Integer, ForeignKey('books.book_id', ondelete='CASCADE'), nullable=False, index=True)
+    reservation_date = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    expiry_date = Column(TIMESTAMP(timezone=True), nullable=True)
+    status = Column(String(20), nullable=False, default='active', index=True)  # active, fulfilled, cancelled
+    
+    # Relationships
+    user = relationship("User", back_populates="reservations")
+    book = relationship("Book")
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'book_id', name='uq_active_reservations'),
+    )
+    
+    def __repr__(self):
+        return f"<Reservation(id={self.reservation_id}, user_id={self.user_id}, book_id={self.book_id}, status={self.status})>"
+
+
+class Fine(Base):
+    """
+    Model for fines (overdue book penalties).
+    """
+    __tablename__ = "fines"
+    
+    fine_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    borrow_id = Column(Integer, ForeignKey('borrow_records.borrow_id', ondelete='CASCADE'), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    amount = Column(DECIMAL(10, 2), nullable=False)
+    issue_date = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    paid_date = Column(TIMESTAMP(timezone=True), nullable=True)
+    status = Column(String(20), nullable=False, default='pending', index=True)  # pending, paid
+    
+    # Relationships
+    user = relationship("User", back_populates="fines")
+    borrow_record = relationship("BorrowRecord", back_populates="fine")
+    
+    def __repr__(self):
+        return f"<Fine(id={self.fine_id}, user_id={self.user_id}, amount={self.amount}, status={self.status})>"
+
+
+class BookMetadata(Base):
+    """
+    Model for extended book metadata (description, TOC, keywords).
+    """
+    __tablename__ = "book_metadata"
+    
+    book_id = Column(Integer, ForeignKey('books.book_id', ondelete='CASCADE'), primary_key=True)
+    description = Column(Text, nullable=True)
+    toc = Column(Text, nullable=True)  # Table of Contents
+    keywords = Column(JSON, nullable=True)  # Array of keywords
+    
+    # Relationships
+    book = relationship("Book", uselist=False)
+    
+    def __repr__(self):
+        return f"<BookMetadata(book_id={self.book_id})>"

@@ -36,8 +36,9 @@ cd SLMS_checkpoint2
 
 **Windows (PowerShell):**
 ```powershell
-Remove-Item -Recurse -Force venv(remove existing venv, if exists)
-python -m venv venv(create new venv)
+Remove-Item -Recurse -Force venv(remove existing venv, if exists, to start fresh)
+python -m venv venv(create new venv) 
+#py -<version> -m venv venv(to install a specific version) e.g # py -3.12 -m venv venv
 .\venv\Scripts\Activate.ps1(activate venv)
 ```
 

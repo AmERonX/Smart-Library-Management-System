@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="index.html" class="active">Dashboard</a></li>
+        <li><a href="add-book.html">Add Book</a></li>
+        <li><a href="pending.html">Pending</a></li>
+        <li><a href="catalogue.html">Catalogue</a></li>
+        <li><a href="#" onclick="handleAdminLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <h1>Dashboard</h1>
+      <p class="subtitle">Overview of your library management system</p>
+    </header>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📚</div>
+        <div class="stat-content">
+          <p class="stat-label">Total Books</p>
+          <p class="stat-value" id="totalBooks">-</p>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card-warning">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-content">
+          <p class="stat-label">Pending Approval</p>
+          <p class="stat-value" id="pendingCount">-</p>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card-success">
+        <div class="stat-icon">✓</div>
+        <div class="stat-content">
+          <p class="stat-label">Added Today</p>
+          <p class="stat-value" id="todayCount">0</p>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card-info">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <p class="stat-label">Available Copies</p>
+          <p class="stat-value" id="availableCopies">-</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Pending Entries -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Recent Pending Entries</h2>
+        <a href="pending.html" class="btn btn-sm btn-outline">View All</a>
+      </div>
+      <div class="card-body">
+        <div id="recentPending">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card mt-4">
+      <div class="card-header">
+        <h2>Quick Actions</h2>
+      </div>
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg);">
+          <a href="add-book.html" class="btn btn-primary btn-lg" style="flex-direction: column; padding: var(--spacing-xl);">
+            <span style="font-size: 2rem;">➕</span>
+            <span>Add New Book</span>
+            <small style="font-size: var(--font-size-sm); font-weight: normal; opacity: 0.9;">Add a book with ISBN or title</small>
+          </a>
+          
+          <a href="pending.html" class="btn btn-outline btn-lg" style="flex-direction: column; padding: var(--spacing-xl);">
+            <span style="font-size: 2rem;">📋</span>
+            <span>Review Pending</span>
+            <small style="font-size: var(--font-size-sm); font-weight: normal;">Approve or reject metadata</small>
+          </a>
+          
+          <a href="catalogue.html" class="btn btn-outline btn-lg" style="flex-direction: column; padding: var(--spacing-xl);">
+            <span style="font-size: 2rem;">🔍</span>
+            <span>Browse Catalogue</span>
+            <small style="font-size: var(--font-size-sm); font-weight: normal;">Search and view all books</small>
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-admin.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+</body>
+</html>
+

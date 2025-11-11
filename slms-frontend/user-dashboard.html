@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="user-dashboard.html" class="active">Dashboard</a></li>
+        <li><a href="user-browse.html">Browse Books</a></li>
+        <li><a href="user-borrows.html">My Borrows</a></li>
+        <li><a href="user-reservations.html">Reservations</a></li>
+        <li><a href="user-fines.html">Fines</a></li>
+        <li><a href="#" onclick="handleLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <div>
+        <h1>Welcome, <span id="userName">User</span>!</h1>
+        <p class="subtitle">Your Library Dashboard</p>
+      </div>
+    </header>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-icon">📖</div>
+        <div class="stat-content">
+          <h3 id="activeBorrows">0</h3>
+          <p>Active Borrows</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📌</div>
+        <div class="stat-content">
+          <h3 id="activeReservations">0</h3>
+          <p>Reservations</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-content">
+          <h3 id="pendingFines">0</h3>
+          <p>Pending Fines</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-content">
+          <h3 id="overdueBooks">0</h3>
+          <p>Overdue Books</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h2>Quick Actions</h2>
+      </div>
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+          <a href="user-browse.html" class="btn btn-primary" style="width: 100%;">Browse Books</a>
+          <a href="user-borrows.html" class="btn btn-outline" style="width: 100%;">My Borrows</a>
+          <a href="user-reservations.html" class="btn btn-outline" style="width: 100%;">My Reservations</a>
+          <a href="user-fines.html" class="btn btn-outline" style="width: 100%;">View Fines</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Borrows -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Recent Borrows</h2>
+        <a href="user-borrows.html" class="btn btn-sm btn-outline">View All</a>
+      </div>
+      <div class="card-body">
+        <div id="recentBorrows">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pages/user-dashboard.js"></script>
+</body>
+</html>
+

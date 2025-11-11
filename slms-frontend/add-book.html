@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Book - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="add-book.html" class="active">Add Book</a></li>
+        <li><a href="pending.html">Pending</a></li>
+        <li><a href="catalogue.html">Catalogue</a></li>
+        <li><a href="#" onclick="handleAdminLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <h1>Add New Book</h1>
+      <p class="subtitle">Add a book to the pending catalogue with automatic metadata extraction</p>
+    </header>
+
+    <!-- Add Book Form -->
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+      <div class="card-body">
+        <form id="addBookForm">
+          <!-- ISBN Input -->
+          <div class="form-group">
+            <label for="isbn" class="form-label">ISBN (Optional)</label>
+            <div class="input-group">
+              <input 
+                type="text" 
+                id="isbn" 
+                name="isbn" 
+                class="form-control" 
+                placeholder="9780132350884 or 0132350882"
+                pattern="[\d\-\sXx]+"
+              >
+              <button type="button" class="btn btn-primary" id="fetchMetadataBtn">
+                Fetch Metadata
+              </button>
+            </div>
+            <small class="form-help">Enter 10 or 13 digit ISBN (ISBN-10 may end with X)</small>
+            <div id="isbnError" class="form-error hidden"></div>
+            <div id="isbnSuccess" class="form-success hidden"></div>
+          </div>
+
+          <div class="text-center text-muted" style="margin: var(--spacing-lg) 0;">
+            <strong>— OR —</strong>
+          </div>
+
+          <!-- Title Input -->
+          <div class="form-group">
+            <label for="title" class="form-label form-label-required">Title</label>
+            <input 
+              type="text" 
+              id="title" 
+              name="title" 
+              class="form-control" 
+              placeholder="Enter book title"
+              required
+            >
+            <div id="titleError" class="form-error hidden"></div>
+          </div>
+
+          <!-- Authors Input -->
+          <div class="form-group">
+            <label for="authors" class="form-label">Authors</label>
+            <div id="authorsContainer">
+              <div class="input-group mb-1">
+                <input 
+                  type="text" 
+                  class="form-control author-input" 
+                  placeholder="Author name"
+                  data-index="0"
+                >
+                <button type="button" class="btn btn-outline" onclick="removeAuthor(0)">Remove</button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline" id="addAuthorBtn">
+              + Add Another Author
+            </button>
+            <small class="form-help">Add one or more authors</small>
+          </div>
+
+          <!-- Total Copies Input -->
+          <div class="form-group">
+            <label for="totalCopies" class="form-label form-label-required">Total Copies</label>
+            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+              <button type="button" class="btn btn-outline" onclick="decrementCopies()">−</button>
+              <input 
+                type="number" 
+                id="totalCopies" 
+                name="totalCopies" 
+                class="form-control" 
+                value="1"
+                min="1"
+                max="999"
+                style="max-width: 100px; text-align: center;"
+                required
+              >
+              <button type="button" class="btn btn-outline" onclick="incrementCopies()">+</button>
+            </div>
+            <div id="copiesError" class="form-error hidden"></div>
+          </div>
+
+          <!-- Metadata Preview -->
+          <div id="metadataPreview" class="hidden" style="margin-top: var(--spacing-xl);">
+            <h3 style="margin-bottom: var(--spacing-md);">Metadata Preview</h3>
+            <div class="alert alert-success">
+              <strong>✓ Metadata fetched successfully!</strong>
+              <p style="margin: var(--spacing-sm) 0 0 0;">The system found the following information:</p>
+            </div>
+            <div id="metadataContent" class="card" style="margin-top: var(--spacing-md);">
+              <div class="card-body" id="metadataDetails">
+                <!-- Metadata will be populated here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-group" style="margin-top: var(--spacing-xl);">
+            <div class="btn-group" style="justify-content: flex-end; width: 100%;">
+              <button type="button" class="btn btn-outline" onclick="resetForm()">
+                Reset Form
+              </button>
+              <button type="submit" class="btn btn-primary" id="submitBtn">
+                Add to Pending Catalogue
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="card" style="max-width: 800px; margin: var(--spacing-2xl) auto 0;">
+      <div class="card-header">
+        <h3>How it works</h3>
+      </div>
+      <div class="card-body">
+        <ol style="line-height: 1.8;">
+          <li><strong>Enter ISBN or Title:</strong> Provide an ISBN for automatic lookup, or enter title and authors manually.</li>
+          <li><strong>Fetch Metadata:</strong> Click "Fetch Metadata" to retrieve book information from Open Library and Google Books.</li>
+          <li><strong>Review Preview:</strong> Check the fetched metadata for accuracy.</li>
+          <li><strong>Submit:</strong> Click "Add to Pending Catalogue" to create a pending entry.</li>
+          <li><strong>Next Step:</strong> The book will appear in the Pending Catalogue for librarian review and approval.</li>
+        </ol>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js?v=2"></script>
+  <script src="js/utils.js?v=2"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/auth-admin.js?v=2"></script>
+  <script src="js/pages/add-book.js?v=2"></script>
+</body>
+</html>
+

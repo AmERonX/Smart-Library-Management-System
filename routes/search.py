@@ -17,7 +17,7 @@ from schemas import (
     SemanticSearchHit,
     ErrorResponse,
 )
-from services.query_processing import normalize_query, expand_query
+from services.query_processing import prepare_query
 from services.vectorizer import embed_text
 from services.ai.faiss_sync import search as faiss_search
 from models import BookFaissMap, Book
@@ -102,9 +102,11 @@ def semantic_search(req: SemanticSearchRequest, db: Session = Depends(get_db)):
                 detail="Semantic search disabled by configuration (ENABLE_SEMANTIC_SEARCH=false)",
             )
         q_raw = req.query
-        q_proc = normalize_query(q_raw) if req.normalize else q_raw
-        if req.expand:
-            q_proc = expand_query(q_proc)
+        q_proc = prepare_query(
+            q_raw,
+            normalize=req.normalize,
+            expand=req.expand,
+        )
 
         try:
             vec = embed_text(q_proc)

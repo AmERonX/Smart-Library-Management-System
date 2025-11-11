@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Fines - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="user-dashboard.html">Dashboard</a></li>
+        <li><a href="user-browse.html">Browse Books</a></li>
+        <li><a href="user-borrows.html">My Borrows</a></li>
+        <li><a href="user-reservations.html">Reservations</a></li>
+        <li><a href="user-fines.html" class="active">Fines</a></li>
+        <li><a href="#" onclick="handleLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <div>
+        <h1>My Fines</h1>
+        <p class="subtitle">View and pay your library fines</p>
+      </div>
+    </header>
+
+    <!-- Summary Card -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+          <div>
+            <p class="text-muted" style="margin-bottom: var(--spacing-xs);">Total Fines</p>
+            <h2 id="totalFines">Rs 0.00</h2>
+          </div>
+          <div>
+            <p class="text-muted" style="margin-bottom: var(--spacing-xs);">Pending Fines</p>
+            <h2 id="pendingCount">0</h2>
+          </div>
+          <div>
+            <p class="text-muted" style="margin-bottom: var(--spacing-xs);">Paid Fines</p>
+            <h2 id="paidCount">0</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fines List -->
+    <div class="card">
+      <div class="card-header">
+        <h2>All Fines</h2>
+        <button class="btn btn-sm btn-outline" onclick="loadFines()">Refresh</button>
+      </div>
+      <div class="card-body">
+        <div id="finesContainer">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pages/user-fines.js"></script>
+</body>
+</html>
+

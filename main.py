@@ -8,6 +8,7 @@ import logging
 import re
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field, field_validator, model_validator
 import requests
@@ -31,6 +32,7 @@ from database import init_db
 from routes import catalogue, insertion
 from routes import search
 from routes import books
+from routes import auth, users
 
 # Configure logging
 logging.basicConfig(
@@ -59,11 +61,22 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Add CORS middleware to allow frontend to connect
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (restrict in production)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
 # Include routers
 app.include_router(catalogue.router)
 app.include_router(insertion.router)  # Phase-1: Book Insertion Service
 app.include_router(search.router)  # Semantic Search
 app.include_router(books.router)  # Books list & detail
+app.include_router(auth.router)  # Authentication (register, login)
+app.include_router(users.router)  # User endpoints (borrowing, reservations, fines)
 
 
 # ============================================================================

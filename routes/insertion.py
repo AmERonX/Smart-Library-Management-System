@@ -202,17 +202,19 @@ async def insert_approved_book(
     except SQLAlchemyError as e:
         # Database errors
         error_msg = f"Database error during insertion: {str(e)}"
-        logger.error(f"Database error for pending_id {pending_id}: {str(e)}")
+        logger.error(f"Database error for pending_id {pending_id}: {str(e)}", exc_info=True)
+        # Include actual error in response for debugging
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during book insertion"
+            detail=f"Database error: {str(e)}"
         )
     
     except Exception as e:
         # Unexpected errors
         error_msg = f"Unexpected error during insertion: {str(e)}"
         logger.error(f"Unexpected error for pending_id {pending_id}: {str(e)}", exc_info=True)
+        # Include actual error in response for debugging
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during book insertion"
+            detail=f"Error: {str(e)}"
         )

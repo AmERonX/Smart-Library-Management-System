@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Detail - SLMS</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <h1>📚 SLMS</h1>
+      </div>
+      <ul class="navbar-menu">
+        <li><a href="index.html">Dashboard</a></li>
+        <li><a href="add-book.html">Add Book</a></li>
+        <li><a href="pending.html">Pending</a></li>
+        <li><a href="catalogue.html">Catalogue</a></li>
+        <li><a href="#" onclick="handleAdminLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Back Button -->
+    <div style="margin-bottom: var(--spacing-lg);">
+      <a href="catalogue.html" class="btn btn-outline">
+        ← Back to Catalogue
+      </a>
+    </div>
+
+    <!-- Book Detail Container -->
+    <div id="bookDetailContainer">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading book details...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-admin.js"></script>
+  <script src="js/pages/book-detail.js"></script>
+</body>
+</html>
+

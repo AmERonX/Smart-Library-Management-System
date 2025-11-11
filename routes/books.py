@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, func
 
 from database import get_db
-from models import Book, Author, Publisher, BookAuthor
+from models import Book, Author, Publisher, BookAuthor, BookMetadata
 from schemas import (
     BooksListResponse,
     BookListItem,
@@ -125,6 +125,20 @@ def get_book_detail(book_id: int, db: Session = Depends(get_db)):
             if ba.author:
                 authors_refs.append(AuthorRef(author_id=int(ba.author.author_id), full_name=ba.author.full_name))
 
+        # Get book metadata (description, keywords, etc.)
+        book_metadata = db.query(BookMetadata).filter(BookMetadata.book_id == book_id).first()
+        
+        # Merge enhanced_metadata with book_metadata description if available
+        # Use dict() to ensure we have a mutable dict (JSONB may return different types)
+        enhanced_metadata = dict(book.enhanced_metadata) if book.enhanced_metadata else {}
+        if book_metadata:
+            # Add description to enhanced_metadata if not already present
+            if book_metadata.description and ('description' not in enhanced_metadata or not enhanced_metadata.get('description')):
+                enhanced_metadata['description'] = book_metadata.description
+            # Add keywords if available
+            if book_metadata.keywords and ('keywords' not in enhanced_metadata or not enhanced_metadata.get('keywords')):
+                enhanced_metadata['keywords'] = book_metadata.keywords
+
         return BookDetailResponse(
             book_id=int(book.book_id),
             title=book.title,
@@ -138,7 +152,7 @@ def get_book_detail(book_id: int, db: Session = Depends(get_db)):
             available_copies=int(book.available_copies),
             publisher=publisher_ref,
             authors=authors_refs,
-            enhanced_metadata=book.enhanced_metadata,
+            enhanced_metadata=enhanced_metadata if enhanced_metadata else None,
         )
     except HTTPException:
         raise

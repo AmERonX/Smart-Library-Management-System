@@ -6,18 +6,76 @@ Ensures data integrity and provides automatic API documentation.
 import re
 from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict, AliasChoices
+from decimal import Decimal
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict, AliasChoices, EmailStr
 
 
 # ============================================================================
 # REQUEST SCHEMAS
 # ============================================================================
 
+class MetadataFetchRequest(BaseModel):
+    """
+    Request schema for fetching metadata only (no pending entry created).
+    Used by POST /catalogue/fetch-metadata endpoint.
+    Title is optional when ISBN is provided.
+    """
+    isbn: Optional[str] = Field(
+        None,
+        description="ISBN-10 or ISBN-13 (10 or 13 digits)"
+    )
+    title: Optional[str] = Field(
+        None,
+        description="Book title (optional if ISBN provided)"
+    )
+    authors: Optional[List[str]] = Field(
+        default=None,
+        description="List of author names"
+    )
+    total_copies: int = Field(
+        default=1,
+        ge=1,
+        description="Number of copies (not used for metadata fetching)",
+        validation_alias=AliasChoices("total_copies", "book_copies"),
+    )
+    
+    @field_validator('isbn')
+    @classmethod
+    def validate_isbn(cls, v):
+        """Validate ISBN format: must be 10 or 13 digits if provided (allows X as ISBN-10 check digit)."""
+        if v is not None:
+            cleaned = v.replace('-', '').replace(' ', '').upper()
+            if not re.match(r'^(\d{9}[\dX]|\d{13})$', cleaned):
+                raise ValueError('ISBN must be exactly 10 or 13 digits (ISBN-10 may end with X)')
+            return cleaned
+        return v
+    
+    @model_validator(mode='after')
+    def validate_isbn_or_title(self):
+        """Ensure at least ISBN or title is provided."""
+        if not self.isbn and not self.title:
+            raise ValueError('Either ISBN or title must be provided')
+        # Clean up placeholder title
+        if self.title == "Fetching title...":
+            self.title = None
+        return self
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "isbn": "9780132350884",
+                "title": None,
+                "authors": None,
+                "total_copies": 1
+            }
+        }
+    )
+
+
 class CatalogueAddRequest(BaseModel):
     """
     Request schema for adding a book to pending catalogue.
-    Used by POST /catalogue/add endpoint. 
-    TODO: Update with actual endpoint, Input provided by librarian
+    Used by POST /catalogue/add endpoint.
     """
     isbn: Optional[str] = Field(
         None,
@@ -95,7 +153,6 @@ class ConfirmationRequest(BaseModel):
     """
     Request schema for librarian confirmation of book metadata.
     Used by POST /catalogue/confirm/{pending_id} endpoint.
-    TODO: Update with actual endpoint, Input provided by librarian
     """
     approved: bool = Field(
         ...,
@@ -132,7 +189,6 @@ class PendingCatalogueResponse(BaseModel):
     """
     Response schema for pending catalogue entry.
     Used by GET /catalogue/pending and POST /catalogue/add endpoints.
-    TODO: Update with actual endpoint, Output provided by librarian
     """
     id: int = Field(..., description="Unique pending catalogue ID")
     isbn: Optional[str] = Field(None, description="ISBN")
@@ -358,3 +414,181 @@ class PendingEditRequest(BaseModel):
         validation_alias=AliasChoices("total_copies", "book_copies"),
     )
     raw_metadata: Optional[Dict[str, Any]] = None
+
+
+# ============================================================================
+# USER & AUTHENTICATION SCHEMAS
+# ============================================================================
+
+class UserRegisterRequest(BaseModel):
+    """User registration request"""
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr = Field(...)
+    password: str = Field(..., min_length=6)
+    role: Optional[str] = Field(default="student", pattern="^(student|admin|librarian)$")
+
+
+class UserLoginRequest(BaseModel):
+    """User login request"""
+    username: str = Field(...)
+    password: str = Field(...)
+
+
+class UserResponse(BaseModel):
+    """User profile response"""
+    user_id: int
+    username: str
+    email: str
+    role: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    """Authentication token response"""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+# ============================================================================
+# BORROWING SCHEMAS
+# ============================================================================
+
+class BorrowRequest(BaseModel):
+    """Request to borrow a book"""
+    book_id: int = Field(..., description="ID of book to borrow")
+    due_date: Optional[datetime] = Field(None, description="Due date (defaults to 14 days from now)")
+
+
+class BorrowResponse(BaseModel):
+    """Borrow operation response"""
+    success: bool
+    borrow_id: Optional[int] = None
+    reserved: bool = Field(default=False, description="True if book was reserved instead of borrowed")
+    message: str
+
+
+class BorrowRecordResponse(BaseModel):
+    """Borrow record details"""
+    borrow_id: int
+    book_id: int
+    book_title: str
+    borrow_date: datetime
+    due_date: datetime
+    return_date: Optional[datetime] = None
+    is_overdue: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BorrowListResponse(BaseModel):
+    """List of borrow records"""
+    total: int
+    items: List[BorrowRecordResponse]
+
+
+class ReturnRequest(BaseModel):
+    """Request to return a book"""
+    borrow_id: int = Field(..., description="ID of borrow record")
+
+
+class ReturnResponse(BaseModel):
+    """Return operation response"""
+    success: bool
+    fine_created: bool = Field(default=False, description="True if a fine was created for overdue return")
+    fine_amount: Optional[Decimal] = None
+    message: str
+
+
+class RenewRequest(BaseModel):
+    """Request to renew a book"""
+    borrow_id: int = Field(..., description="ID of borrow record")
+    new_due_date: Optional[datetime] = Field(None, description="New due date (defaults to 14 days from now)")
+
+
+class RenewResponse(BaseModel):
+    """Renew operation response"""
+    success: bool
+    borrow_id: int
+    new_due_date: datetime
+    message: str
+
+
+# ============================================================================
+# RESERVATION SCHEMAS
+# ============================================================================
+
+class ReservationRequest(BaseModel):
+    """Request to create a reservation"""
+    book_id: int = Field(..., description="ID of book to reserve")
+
+
+class ReservationResponse(BaseModel):
+    """Reservation details"""
+    reservation_id: int
+    book_id: int
+    book_title: str
+    reservation_date: datetime
+    expiry_date: Optional[datetime] = None
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReservationListResponse(BaseModel):
+    """List of reservations"""
+    total: int
+    items: List[ReservationResponse]
+
+
+# ============================================================================
+# FINE SCHEMAS
+# ============================================================================
+
+class FineResponse(BaseModel):
+    """Fine details"""
+    fine_id: int
+    borrow_id: int
+    book_title: str
+    amount: Decimal
+    issue_date: datetime
+    paid_date: Optional[datetime] = None
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FineListResponse(BaseModel):
+    """List of fines"""
+    total: int
+    total_amount: Decimal
+    items: List[FineResponse]
+
+
+class PayFineRequest(BaseModel):
+    """Request to pay a fine"""
+    fine_id: int = Field(..., description="ID of fine to pay")
+
+
+class PayFineResponse(BaseModel):
+    """Pay fine operation response"""
+    success: bool
+    fine_id: int
+    message: str
+
+
+# ============================================================================
+# USER DASHBOARD SCHEMAS
+# ============================================================================
+
+class UserSummaryResponse(BaseModel):
+    """User dashboard summary"""
+    user_id: int
+    username: str
+    active_borrows: int
+    active_reservations: int
+    pending_fines: int
+    total_fine_amount: Decimal
+    overdue_books: int
