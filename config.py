@@ -10,9 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables early
 load_dotenv()
 
-# ============================================================================
-# API CONFIGURATION
-# ============================================================================
+
 
 # External API URLs
 OPENLIBRARY_API_URL = os.getenv(
@@ -28,9 +26,8 @@ GOOGLEBOOKS_API_URL = os.getenv(
 # Google Books API Key (optional, increases rate limits)
 GOOGLEBOOKS_API_KEY: Optional[str] = os.getenv("GOOGLEBOOKS_API_KEY", None)
 
-# ============================================================================
-# PERFORMANCE SETTINGS
-# ============================================================================
+
+
 
 # Request timeout in seconds
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "5"))
@@ -38,15 +35,13 @@ REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "5"))
 # Maximum retries for failed API calls
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
 
-# ============================================================================
-# VALIDATION SETTINGS
-# ============================================================================
 
 # ISBN validation pattern (allows X/x as ISBN-10 check digit)
 ISBN_PATTERN = r'^(\d{9}[\dXx]|\d{13})$'
 
 # Minimum number of core fields required from Open Library
 MIN_CORE_FIELDS = 3
+
 
 # Core fields to check for completeness
 CORE_FIELDS = ['title', 'publishers', 'publish_date']
@@ -74,11 +69,10 @@ PORT = int(os.getenv("PORT", "8000"))
 # Enable auto-reload (development only)
 RELOAD = os.getenv("RELOAD", "False").lower() == "true"
 
-# ============================================================================
-# FEATURE FLAGS
-# ============================================================================
 
-# Enable/disable Open Library as primary source
+#FEATURE FLAGS
+
+# Enable/disable Open Library as primary source, default true.
 ENABLE_OPENLIBRARY = os.getenv("ENABLE_OPENLIBRARY", "True").lower() == "true"
 
 # Enable/disable Google Books as fallback
@@ -87,11 +81,9 @@ ENABLE_GOOGLEBOOKS = os.getenv("ENABLE_GOOGLEBOOKS", "True").lower() == "true"
 # Enable detailed API response logging
 ENABLE_API_LOGGING = os.getenv("ENABLE_API_LOGGING", "True").lower() == "true"
 
-# ============================================================================
-# AI ENHANCEMENT CONFIGURATION
-# ============================================================================
 
-# Feature flag to enable AI enhancement pipeline
+
+# Enable AI enhancement pipeline
 ENABLE_AI_ENHANCEMENT = os.getenv("ENABLE_AI_ENHANCEMENT", "True").lower() == "true"
 
 # Keys for Gemini and LangSearch
@@ -134,7 +126,7 @@ FAISS_INDEX_DIR = os.getenv("FAISS_INDEX_DIR", os.path.join("data", "faiss_index
 FAISS_INDEX_PATH = os.path.join(FAISS_INDEX_DIR, "library_index.faiss")
 FAISS_ID_MAP_PATH = os.path.join(FAISS_INDEX_DIR, "id_map.json")
 
-# Dual FAISS indexes and lock files (new)
+# Dual FAISS indexes and lock files(new)
 FAISS_IDENTITY_INDEX_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_identity.index")
 FAISS_TOPICAL_INDEX_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_topical.index")
 FAISS_IDENTITY_LOCK_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_identity.lock")
@@ -143,9 +135,7 @@ FAISS_TOPICAL_LOCK_PATH = os.path.join(FAISS_INDEX_DIR, "faiss_topical.lock")
 # Strict validation toggle (fail startup if AI keys missing)
 STRICT_AI_VALIDATION = os.getenv("STRICT_AI_VALIDATION", "False").lower() == "true"
 
-# ============================================================================
-# FUTURE CONFIGURATION (Step 2+)
-# ============================================================================
+##FUTURE CONFIGURATION
 
 # Redis configuration (for future async implementation)
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -156,8 +146,8 @@ REDIS_DB = int(os.getenv("REDIS_DB", "0"))
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
 
-# Note: DATABASE_URL is defined in database.py (not here to avoid duplication)
-# See database.py for database configuration
+
+  ### See database.py for database configuration ###
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -243,7 +233,7 @@ def validate_config():
     if MAX_RETRIES < 0:
         errors.append("MAX_RETRIES cannot be negative")
     
-    # AI enhancement validation (soft by default)
+    # AI enhancement validatioN
     if ENABLE_AI_ENHANCEMENT and STRICT_AI_VALIDATION:
         if not GOOGLE_API_KEY:
             errors.append("GOOGLE_API_KEY is required when ENABLE_AI_ENHANCEMENT and STRICT_AI_VALIDATION are true")

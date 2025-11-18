@@ -27,12 +27,12 @@ def _paths(vector_type: str) -> Tuple[str, str]:
     raise ValueError("vector_type must be 'identity' or 'topical'")
 
 
-def _normalize(v: np.ndarray) -> np.ndarray:
-    v = v.astype(np.float32)
-    n = np.linalg.norm(v)
-    if n == 0:
-        return v
-    return v / n
+def _normalize(vector: np.ndarray) -> np.ndarray:
+    vector = vector.astype(np.float32)
+    norm = np.linalg.norm(vector)
+    if norm == 0:
+        return vector
+    return vector / norm
 
 
 def _load_or_create(index_path: str) -> faiss.IndexIDMap:
@@ -48,9 +48,9 @@ def _load_or_create(index_path: str) -> faiss.IndexIDMap:
 def append(vector_type: str, faiss_id: int, vector: np.ndarray) -> None:
     _ensure_dirs()
     index_path, lock_path = _paths(vector_type)
-    v = _normalize(vector)
-    if v.shape[0] != _DIM:
-        raise ValueError(f"Vector dim {v.shape[0]} != expected {_DIM}")
+    normalized_vector = _normalize(vector)
+    if normalized_vector.shape[0] != _DIM:
+        raise ValueError(f"Vector dim {normalized_vector.shape[0]} != expected {_DIM}")
 
     with portalocker.Lock(lock_path, "a+b", timeout=30):
         index = _load_or_create(index_path)
@@ -59,7 +59,7 @@ def append(vector_type: str, faiss_id: int, vector: np.ndarray) -> None:
             index.remove_ids(remove_ids)
         except Exception:
             pass
-        mat = np.expand_dims(v, axis=0).astype(np.float32)
+        mat = np.expand_dims(normalized_vector, axis=0).astype(np.float32)
         ids = np.array([faiss_id], dtype=np.int64)
         index.add_with_ids(mat, ids)
         faiss.write_index(index, index_path)
@@ -90,8 +90,8 @@ def search(vector_type: str, query_vec: np.ndarray, k: int = 5) -> List[Tuple[in
     if not os.path.exists(index_path):
         return []
     idx = faiss.read_index(index_path)
-    q = _normalize(query_vec).astype(np.float32)
-    D, I = idx.search(np.expand_dims(q, 0), k)
+    normalized_query_vec = _normalize(query_vec)
+    D, I = idx.search(np.expand_dims(normalized_query_vec, 0), k)
     ids = I[0].tolist()
     scores = D[0].tolist()
     return [(int(i), float(s)) for i, s in zip(ids, scores) if i != -1]

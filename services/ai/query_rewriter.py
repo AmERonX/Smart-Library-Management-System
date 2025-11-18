@@ -37,6 +37,7 @@ def _load_prompt() -> Optional[str]:
 
 @lru_cache(maxsize=None)
 def _get_model(model_name: str):
+    """Cache the instantiated model (to avoid instantiating the model every time),"""
     return genai.GenerativeModel(model_name)
 
 

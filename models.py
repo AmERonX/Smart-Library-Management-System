@@ -107,7 +107,7 @@ class CatalogueAudit(Base):
         String(50),
         nullable=False,
         index=True,
-        comment="Action type (e.g., 'input_received', 'approved', 'rejected')"
+        comment="Action type (e.g., 'input_received', 'metadata_extraction','approved', 'rejected')"
     )
     source = Column(
         String(50),
@@ -133,9 +133,8 @@ class CatalogueAudit(Base):
         return f"<CatalogueAudit(id={self.id}, pending_id={self.pending_id}, action={self.action}, timestamp={self.timestamp})>"
 
 
-# ============================================================================
+
 # CORE LIBRARY MODELS (for Book Insertion Service)
-# ============================================================================
 
 class Publisher(Base):
     """
@@ -189,7 +188,7 @@ class Book(Base):
     
     # ISBN fields (support multiple formats)
     isbn = Column(String(20), nullable=True, unique=True, comment="Legacy ISBN field (backward compatibility)")
-    isbn_10 = Column(String(10), nullable=True, index=True, comment="ISBN-10 format")
+    isbn_10 = Column(String(10), nullable=True, unique=True, index=True, comment="ISBN-10 format")
     isbn_13 = Column(String(13), nullable=True, unique=True, index=True, comment="ISBN-13 format (canonical)")
     
     # Core metadata

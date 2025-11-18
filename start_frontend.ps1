@@ -18,10 +18,10 @@ if ($port3000) {
         }
     }
     
-    foreach ($pid in $pids) {
-        if ($pid) {
-            Write-Host "  Killing process PID: $pid" -ForegroundColor Yellow
-            taskkill /PID $pid /F 2>$null
+    foreach ($processId in $pids) {
+        if ($processId) {
+            Write-Host "  Killing process PID: $processId" -ForegroundColor Yellow
+            taskkill /PID $processId /F 2>$null
         }
     }
     

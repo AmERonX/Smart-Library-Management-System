@@ -41,9 +41,7 @@ from models import (
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
 # HELPER FUNCTIONS - ISBN Normalization
-# ============================================================================
 
 def normalize_isbn(isbn: Optional[str]) -> Optional[str]:
     """
@@ -97,9 +95,7 @@ def infer_isbn_type(isbn: str) -> Optional[str]:
         return None
 
 
-# ============================================================================
 # HELPER FUNCTIONS - Database Upserts
-# ============================================================================
 
 def get_or_create_publisher(db: Session, publisher_name: Optional[str]) -> Optional[int]:
     """
@@ -175,7 +171,7 @@ def get_or_create_author(db: Session, author_name: str) -> int:
         logger.debug(f"Found existing author: {author_name} (ID: {existing.author_id})")
         return existing.author_id
     
-    # Create new author using upsert (PostgreSQL specific)
+    # Create new author using upsert
     try:
         stmt = pg_insert(Author).values(full_name=author_name, bio=None)
         stmt = stmt.on_conflict_do_nothing(index_elements=['full_name'])

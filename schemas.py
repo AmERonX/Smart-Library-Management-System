@@ -34,7 +34,7 @@ class MetadataFetchRequest(BaseModel):
     )
     total_copies: int = Field(
         default=1,
-        ge=1,
+        ge=1, #ge -> greater than or equal to
         description="Number of copies (not used for metadata fetching)",
         validation_alias=AliasChoices("total_copies", "book_copies"),
     )
@@ -127,9 +127,20 @@ class CatalogueAddRequest(BaseModel):
 class SemanticSearchRequest(BaseModel):
     query: str = Field(..., min_length=1)
     mode: Literal["identity", "topical", "hybrid"] = Field("hybrid")
-    top_k: int = Field(10, ge=1, le=50)
-    normalize: bool = Field(True)
-    expand: bool = Field(False)
+    top_k: int = Field(
+        default=10, 
+        ge=1, 
+        le=50,
+        description="Number of results to return (must be between 1 and 50)"
+        )
+    normalize: bool = Field(
+        True,
+        description="Normalize results"
+        )
+    expand: bool = Field(
+        False,
+        description="Expand results"
+        )
 
 
 class SemanticSearchHit(BaseModel):

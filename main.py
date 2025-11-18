@@ -72,11 +72,11 @@ app.add_middleware(
 
 # Include routers
 app.include_router(catalogue.router)
-app.include_router(insertion.router)  # Phase-1: Book Insertion Service
-app.include_router(search.router)  # Semantic Search
-app.include_router(books.router)  # Books list & detail
-app.include_router(auth.router)  # Authentication (register, login)
-app.include_router(users.router)  # User endpoints (borrowing, reservations, fines)
+app.include_router(insertion.router) # Book Insertion Service
+app.include_router(search.router)    # Semantic Search
+app.include_router(books.router)     # Books list & detail
+app.include_router(auth.router)      # Authentication (register, login)
+app.include_router(users.router)     # User endpoints (borrowing, reservations, fines)
 
 
 # ============================================================================
@@ -90,7 +90,7 @@ class BookInput(BaseModel):
     """
     isbn: Optional[str] = Field(None, description="10 or 13 digit ISBN")
     title: Optional[str] = Field(None, description="Book title")
-    authors: Optional[List[str]] = Field(default=None, description="List of author names")
+    authors: Optional[List[str]] = Field(None, description="List of author names")
     total_copies: int = Field(default=1, ge=1, description="Number of copies to add")
 
     @field_validator('isbn')
