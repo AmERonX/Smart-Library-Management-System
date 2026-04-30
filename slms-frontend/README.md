@@ -19,7 +19,13 @@ Web-based frontend for Smart Library Management System using vanilla HTML, CSS, 
 - **Pending** (`pending.html`) - Review/approve workflow
 - **Catalogue** (`catalogue.html`) - Browse, search, filter books
 - **Book Detail** (`book-detail.html`) - Complete book information
-- **User Portal** (`login.html`, `user-*.html`) - User dashboard, browsing, borrowing
+- **User Portal** (`login.html`) - Secure user authentication and registration
+- **User Dashboard** (`user-dashboard.html`) - User statistics, borrowed books, and active reservations
+- **User Book Browse** (`user-browse.html`) - Browse the catalogue with filtering and semantic search capabilities
+- **User Book Detail** (`user-book-detail.html`) - View specific book details and place reservations
+- **My Borrows** (`user-borrows.html`) - View currently borrowed books and borrowing history
+- **My Reservations** (`user-reservations.html`) - Manage active and historical book reservations
+- **My Fines** (`user-fines.html`) - View and manage outstanding fines
 
 ## Configuration
 
@@ -46,4 +52,3 @@ slms-frontend/
 ```
 
 For detailed testing instructions, see [TESTING_GUIDE.md](TESTING_GUIDE.md).
-
