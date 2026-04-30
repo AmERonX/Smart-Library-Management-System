@@ -1,6 +1,6 @@
 # Smart Library Management System (SLMS)
 
-**Version:** 2.0 | **Status:** ✅ Production Ready | **Last Updated:** 2025-10-11
+**Version:** 2.0 | **Status:** Production Ready | **Last Updated:** 2026-04-30
 
 A complete FastAPI-based library management system with automatic metadata extraction, librarian confirmation workflow, and intelligent book cataloguing.
 
@@ -22,31 +22,41 @@ pip install -r requirements.txt
 
 For full setup and troubleshooting, see [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md).
 
-## 🎯 Features
+## Features
 
 ### Core Features
-- ✅ **Unified Workflow**: Single endpoint handles book addition + metadata extraction
-- ✅ **Dual API Integration**: Open Library (primary) + Google Books (fallback)
-- ✅ **Intelligent Fallback**: Automatically switches APIs if one fails
-- ✅ **ISBN Support**: Full support for ISBN-10 and ISBN-13 formats
-- ✅ **Database-First**: All operations persisted with complete audit trail
-- ✅ **Idempotent Operations**: Safe to retry any step
-- ✅ **Fast Response**: Optimized for <5 second response times
+- **Unified Workflow**: Single endpoint handles book addition + metadata extraction
+- **Dual API Integration**: Open Library (primary) + Google Books (fallback)
+- **Intelligent Fallback**: Automatically switches APIs if one fails
+- **ISBN Support**: Full support for ISBN-10 and ISBN-13 formats
+- **Database-First**: All operations persisted with complete audit trail
+- **Idempotent Operations**: Safe to retry any step
+- **Fast Response**: Optimized for <5 second response times
 
 ### Librarian Confirmation Workflow
-- ✅ **Automatic Metadata Extraction**: Fetches from external APIs automatically
-- ✅ **Pending Catalogue Management**: Store unconfirmed metadata separately
-- ✅ **Librarian Review & Approval**: Review, edit, approve, or reject metadata
-- ✅ **Complete Audit Trail**: Full traceability of all actions with timestamps
-- ✅ **Transaction Safety**: Atomic operations with rollback on errors
-- ✅ **Graceful Failure Handling**: Manual entry if APIs fail
+- **Automatic Metadata Extraction**: Fetches from external APIs automatically
+- **Pending Catalogue Management**: Store unconfirmed metadata separately
+- **Librarian Review & Approval**: Review, edit, approve, or reject metadata
+- **Complete Audit Trail**: Full traceability of all actions with timestamps
+- **Transaction Safety**: Atomic operations with rollback on errors
+- **Graceful Failure Handling**: Manual entry if APIs fail
 
-### Book Insertion Service (Phase-1)
-- ✅ **ISBN-Aware Insertion**: Handles both ISBN-10 and ISBN-13
-- ✅ **Duplicate Detection**: Adds copies to existing books
-- ✅ **Publisher/Author Upserts**: Prevents duplicate entities
-- ✅ **Edition Management**: Different ISBNs = different editions
-- ✅ **17/17 Tests Passing**: Comprehensive test coverage
+### Book Insertion Service
+- **ISBN-Aware Insertion**: Handles both ISBN-10 and ISBN-13
+- **Duplicate Detection**: Adds copies to existing books
+- **Publisher/Author Upserts**: Prevents duplicate entities
+- **Edition Management**: Different ISBNs = different editions
+
+### Semantic Search & AI Features
+- **Intelligent Search**: Find books by meaning, not just exact keyword matches using the `/search/semantic` API.
+- **AI Metadata Enhancement**: Enriches book metadata automatically via Gemini and LangSearch.
+- **Vector Embeddings**: Auto-generates text embeddings using FAISS for catalogue matching.
+
+### User Management & Operations
+- **Authentication**: Secure user registration and login.
+- **Borrowing System**: Complete tracking of book checkouts and returns.
+- **Book Reservations**: Users can reserve books that are currently unavailable.
+- **Fines Tracking**: Automated fine calculation for late returns.
 
 ## Quick Start
 
@@ -158,7 +168,7 @@ Note: Changing `EMBED_DIM` or `EMBEDDING_MODEL_NAME` requires rebuilding FAISS i
 
 ---
 
-## 🔄 **Complete Workflow**
+## 🔄 Complete Workflow
 
 The system follows a **4-step librarian-centric workflow**:
 
@@ -255,7 +265,7 @@ For detailed API documentation, see [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.m
 
 
 
-## 📚 **Documentation Index**
+## 📚 Documentation Index
 
 **Not sure where to start?**
 
@@ -304,7 +314,9 @@ SLMS_checkpoint2/
 │   ├── catalogue.py                 # Librarian confirmation workflow
 │   ├── insertion.py                 # Book insertion service
 │   ├── search.py                    # Semantic search API
-│   └── books.py                     # Books list & detail
+│   ├── books.py                     # Books list & detail
+│   ├── auth.py                      # Authentication endpoints
+│   └── users.py                     # User operations (borrowing, reservations, fines)
 │
 ├── services/                        # Business logic layer
 │   ├── __init__.py
